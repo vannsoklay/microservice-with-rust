@@ -1,0 +1,16 @@
+[package]
+name = "root-microservice"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+
+actix-web = "*"
+actix-service = "*"
+openssl = "*"
+reqwest = { version = "*", features = ["blocking", "json"] }
+futures = "*"
+
+jsonwebtoken = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
