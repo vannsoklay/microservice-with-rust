@@ -6,16 +6,16 @@ mod routing;
 use std::sync::Arc;
 
 use actix_web::{middleware::Logger, web, App, HttpRequest, HttpResponse, HttpServer, Responder};
-use auth::jwt::{create_token, validate_token};
+use auth::{jwt::{create_token, validate_token}, login};
 use health::health_check;
-use middleware::jwt_auth_middleware;
+use middleware::AuthMiddleware;
 use routing::{load_balancer::proxy_request, ServiceState};
 // use openssl::ssl::{SslAcceptor, SslFiletype, SslMethod};
 
-pub async fn login(user_id: web::Json<String>, secret: &str) -> impl Responder {
-    let token = create_token(&user_id, secret);
-    HttpResponse::Ok().body(token)
-}
+// pub async fn login(user_id: web::Json<String>, secret: &str) -> impl Responder {
+//     let token = create_token(&user_id, secret);
+//     HttpResponse::Ok().body(token)
+// }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
@@ -36,26 +36,17 @@ async fn main() -> std::io::Result<()> {
     // .run()
     // .await
 
-    let secret = "your_secret_key"; // Store this in an environment variable or configuration
+    // let secret = "your_secret_key"; // Store this in an environment variable or configuration
 
     HttpServer::new(move || {
         App::new()
             .wrap(Logger::default()) // Optional: Log requests
             .app_data(web::Data::new(state.clone()))
             .route("/health", web::get().to(health_check)) // Health check endpoint
-            .route(
-                "/api/login",
-                web::post().to(|user_id: web::Json<String>| login(user_id, secret)),
-            )
-            .service(
-                web::resource("/api")
-                    .route(web::get().to(|req: HttpRequest| jwt_auth_middleware(req, secret))),
-            )
-            .service(
-                web::resource("/api")
-                    .route(web::get().to(|req: HttpRequest| jwt_auth_middleware(req, secret))),
-            )
-            .default_service(web::route().to(proxy_request))
+            .service(login::login)
+            .wrap(AuthMiddleware) // Register the authentication middleware
+            .route("/api", web::route().to(proxy_request))
+            .default_service(web::route().to(|| HttpResponse::NotFound()))
     })
     .bind("0.0.0.0:8443")?
     .run()

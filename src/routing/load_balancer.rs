@@ -22,6 +22,7 @@ pub async fn proxy_request(
         // Return 404 if no matching service is found
         return HttpResponse::NotFound().body("Service not found");
     };
+    
     // Get the next backend for the selected service
     let backend_url = state
         .get_next_backend(service_name)
