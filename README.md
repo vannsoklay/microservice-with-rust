@@ -1,34 +1,46 @@
-
-Microservice with Rust
+# Microservice with Rust
 
 A concise and efficient microservice built with Rust, designed to [insert a brief description of what the microservice does].
 
-Table of Contents
-Features
-Prerequisites
-Setup and Installation
-Configuration
-Usage
-API Documentation
-Testing
-License
-Features
-[Feature 1: e.g., Lightweight HTTP REST API]
-[Feature 2: e.g., Optimized database queries]
-[Feature 3: e.g., Secure JWT authentication]
-[Feature 4: e.g., Configurable with .env file]
-Prerequisites
-Ensure you have the following installed before setting up:
+---
 
-Rust and Cargo (v1.x or newer)
-docker (optional, for containerization)
-PostgreSQL or any other database if required.
-Setup and Installation
-1. Clone the Repository
-bash
-Copy code
+## Table of Contents
+- [Features](#features)
+- [Prerequisites](#prerequisites)
+- [Setup and Installation](#setup-and-installation)
+- [Configuration](#configuration)
+- [Usage](#usage)
+- [API Documentation](#api-documentation)
+- [Testing](#testing)
+- [Building a Docker Image](#building-a-docker-image)
+- [License](#license)
+
+---
+
+## Features
+- Lightweight HTTP REST API
+- Optimized database queries
+- Secure JWT authentication
+- Configurable with `.env` file
+
+---
+
+## Prerequisites
+
+Ensure you have the following installed before setting up:
+- [Rust and Cargo](https://www.rust-lang.org/tools/install) (v1.x or newer)
+- [Docker](https://www.docker.com/) (optional, for containerization)
+- `PostgreSQL` or any other database if required.
+
+---
+
+## Setup and Installation
+
+### 1. Clone the Repository
+```bash
 git clone git@github.com:vannsoklay/microservice-with-rust.git
-cd your-microservice
+cd microservice-with-rust
+
 2. Build the Project
 Run the following command to build the Rust microservice:
 
