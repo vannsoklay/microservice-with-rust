@@ -7,7 +7,7 @@ edition = "2021"
 
 actix-web = "*"
 actix-service = "*"
-openssl = "*"
+actix-cors = "*"
 reqwest = { version = "*", features = ["blocking", "json"] }
 futures = "*"
 

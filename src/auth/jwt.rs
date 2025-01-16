@@ -28,6 +28,7 @@ pub fn create_token(user_id: &str, secret: &str) -> Result<String, JwtError> {
         &EncodingKey::from_secret(secret.as_bytes()),
     )
 }
+
 pub fn validate_token(
     token: &str,
     secret: &str,

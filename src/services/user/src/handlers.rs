@@ -1,41 +1,22 @@
-use crate::{db::DBConfig, identify::identify, models::Product};
+use crate::{db::DBConfig, identify::identify, models::*};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
-use futures_util::TryStreamExt;
-use mongodb::bson::{doc, oid::ObjectId};
+use mongodb::bson::doc;
+use serde_json::json; // Add this import for json!
+use argon2::{
+    password_hash::{
+        rand_core::OsRng,
+        PasswordHash, 
+        PasswordHasher, 
+        PasswordVerifier, 
+        SaltString
+    },
+    Argon2
+};
+use crate::AppState;
 
-// get all products
-pub async fn get_all_products() -> impl Responder {
-    let collection = DBConfig::product_collection().await;
-    let cursor = collection.find(doc! {}).await;
-
-    match cursor {
-        Ok(mut cursor) => {
-            let mut products = vec![];
-            while let Some(product) = cursor.try_next().await.unwrap_or(None) {
-                products.push(product);
-            }
-            HttpResponse::Ok().json(products)
-        }
-        Err(_) => HttpResponse::InternalServerError().finish(),
-    }
-}
-
-// get product by id
-pub async fn get_product_by_id(product_id: web::Path<String>) -> impl Responder {
-    let collection = DBConfig::product_collection().await;
-    let id = ObjectId::parse_str(&*product_id).unwrap();
-
-    let product = collection.find_one(doc! { "_id": id }).await;
-
-    match product.unwrap() {
-        Some(product) => HttpResponse::Ok().json(product),
-        None => HttpResponse::NotFound().finish(),
-    }
-}
-
-// create a new product
-pub async fn create_product(req: HttpRequest, new_product: web::Json<Product>) -> impl Responder {
-    let collection = DBConfig::product_collection().await;
+// get all user
+pub async fn get_user(state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
+    let collection = state.db.collection::<User>("users");
 
     let user_id = match identify(req).await {
         Ok(id) => id,
@@ -44,71 +25,162 @@ pub async fn create_product(req: HttpRequest, new_product: web::Json<Product>) -
 
     println!("user_id {}", user_id);
 
-    let new_product = Product {
-        id: None, // Let MongoDB generate the ID
-        name: new_product.name.clone(),
-        description: new_product.description.clone(),
-        price: new_product.price,
-        stock: new_product.stock,
+    // Find the user by ID
+    let user = match collection.find_one(doc! { "_id": user_id }).await {
+        Ok(Some(user)) => user,
+        _ => return HttpResponse::NotFound().json(json!({ "error": "User not found" })),
     };
 
-    let result = collection.insert_one(new_product).await;
-
-    match result {
-        Ok(insert_result) => HttpResponse::Created().json(insert_result.inserted_id),
-        Err(_) => HttpResponse::InternalServerError().finish(),
-    }
+    let response = User::to_user(user);
+    HttpResponse::Ok().json(response)
 }
 
-// update a product
-pub async fn update_product(
-    product_id: web::Path<String>,
-    updated_product: web::Json<Product>,
+// register
+pub async fn register(
+    state: web::Data<AppState>,
+    req: web::Json<RegisterRequest>,
 ) -> impl Responder {
-    let collection = DBConfig::product_collection().await;
-    let id = ObjectId::parse_str(&*product_id).unwrap();
+    let collection = state.db.collection::<User>("users");
 
-    let result = collection
-        .update_one(
-            doc! { "_id": id },
-            doc! {
-                "$set": {
-                    "name": updated_product.name.clone(),
-                    "description": updated_product.description.clone(),
-                    "price": updated_product.price,
-                    "stock": updated_product.stock
-                }
-            },
-        )
-        .await;
+    // Check if username already exists
+    if let Ok(Some(_)) = collection.find_one(doc! { "username": &req.username }).await {
+        return HttpResponse::Conflict().json(json!({ "error": "Username already exists" }));
+    }
 
-    match result {
-        Ok(update_result) => {
-            if update_result.matched_count == 1 {
-                HttpResponse::Ok().json(update_result)
-            } else {
-                HttpResponse::NotFound().finish()
-            }
+    // Generate a random salt
+    let salt = argon2::password_hash::SaltString::generate(&mut argon2::password_hash::rand_core::OsRng);
+
+    // Hash the password using Argon2
+    let argon2 = Argon2::default();
+    let hashed_password = match argon2.hash_password(req.password.as_bytes(), &salt) {
+        Ok(hash) => hash.to_string(),
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({ "error": "Failed to hash password" }))
         }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+    };
+
+    // Create a new user
+    let new_user = User {
+        id: mongodb::bson::oid::ObjectId::new(),
+        username: req.username.clone(),
+        email: "".to_string(), // Add email field to request if needed
+        password: hashed_password,
+        avatar: None,
+        bio: None,
+        follower_count: 0,
+        following_count: 0,
+        is_verified: false,
+        last_login: None,
+        status: Status::Active,
+        created_at: mongodb::bson::DateTime::now(),
+        updated_at: mongodb::bson::DateTime::now(),
+    };
+
+    // Insert user into the database
+    if let Err(err) = collection.insert_one(new_user).await {
+        return HttpResponse::InternalServerError().json(json!({ "error": err.to_string() }));
+    }
+
+    HttpResponse::Created().json(json!({ "message": "User registered successfully" }))
+}
+
+// login
+pub async fn login(
+    state: web::Data<AppState>,
+    req: web::Json<LoginRequest>,
+) -> impl Responder {
+    let collection = state.db.collection::<User>("users");
+
+    // Find the user by username
+    let user = match collection
+        .find_one(doc! { "username": &req.username })
+        .await
+    {
+        Ok(Some(user)) => user,
+        _ => {
+            return HttpResponse::Unauthorized().json(json!({ "error": "Invalid username or password" }));
+        }
+    };
+
+   // Verify the password
+   let parsed_hash = match argon2::password_hash::PasswordHash::new(&user.password) {
+    Ok(hash) => hash,
+    Err(_) => {
+        return HttpResponse::InternalServerError()
+            .json(json!({ "error": "Invalid password hash" }))
+    }
+};
+
+    let is_valid = Argon2::default()
+    .verify_password(req.password.as_bytes(), &parsed_hash)
+    .is_ok();
+
+    if is_valid {
+    HttpResponse::Ok().json(json!({ "message": "Login successful", "user_id": user.id }))
+    } else {
+        HttpResponse::Unauthorized().json(json!({ "error": "Invalid username or password" }))
     }
 }
 
-// delete a product
-pub async fn delete_product(product_id: web::Path<String>) -> impl Responder {
-    let collection = DBConfig::product_collection().await;
-    let id = ObjectId::parse_str(&*product_id).unwrap();
+// change password
+pub async fn change_password(
+    body: web::Json<ChangePasswordRequest>,
+    req: HttpRequest
+) -> impl Responder {
+    let collection = DBConfig::user_collection().await;
 
-    let result = collection.delete_one(doc! { "_id": id }).await;
+    // Parse the User ID
+    let user_id = match identify(req).await {
+        Ok(id) => id,
+        Err(err) => return err,
+    };
 
-    match result {
-        Ok(delete_result) => {
-            if delete_result.deleted_count == 1 {
-                HttpResponse::NoContent().finish()
-            } else {
-                HttpResponse::NotFound().finish()
-            }
+    // Find the user by ID
+    let mut user = match collection.find_one(doc! { "_id": user_id.clone() }).await {
+        Ok(Some(user)) => user,
+        _ => return HttpResponse::NotFound().json(json!({ "error": "User not found" })),
+    };
+
+    // Verify the old password
+    let parsed_hash = match PasswordHash::new(&user.password) {
+        Ok(hash) => hash,
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({ "error": "Invalid password hash" }))
         }
-        Err(_) => HttpResponse::InternalServerError().finish(),
+    };
+
+    let is_old_password_valid = Argon2::default()
+        .verify_password(body.old_password.as_bytes(), &parsed_hash)
+        .is_ok();
+
+    if !is_old_password_valid {
+        return HttpResponse::Unauthorized().json(json!({ "error": "Invalid old password" }));
     }
+
+    // Generate a new salt and hash the new password
+    let salt = SaltString::generate(&mut OsRng);
+    let argon2 = Argon2::default();
+    
+    let new_password_hash = match argon2.hash_password(body.new_password.as_bytes(), &salt) {
+        Ok(hash) => hash.to_string(),
+        Err(_) => {
+            return HttpResponse::InternalServerError()
+                .json(json!({ "error": "Failed to hash new password" }))
+        }
+    };
+
+    // Update the user's password in the database
+    if let Err(err) = collection
+        .update_one(
+            doc! { "_id": user_id.clone() },
+            doc! { "$set": { "password": new_password_hash } }
+        )
+        .await
+    {
+        return HttpResponse::InternalServerError().json(json!({ "error": err.to_string() }));
+    }
+
+    HttpResponse::Ok().json(json!({ "message": "Password changed successfully" }))
 }

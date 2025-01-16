@@ -9,6 +9,7 @@ pub async fn identify(req: HttpRequest) -> Result<String, HttpResponse> {
         if let Some(role) = req.headers().get("X-User-Role") {
             if role == "user" {
                 let user_id_str = user_id.to_str().unwrap_or("unknown");
+                println!("user_id_str {}", user_id_str);
                 return Ok(user_id_str.to_string());
             } else {
                 return Err(HttpResponse::Forbidden().json(ErrorResponse {

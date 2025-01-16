@@ -15,7 +15,7 @@ async fn db() -> Database {
 }
 
 impl DBConfig {
-    pub async fn product_collection() -> Collection<User> {
+    pub async fn user_collection() -> Collection<User> {
         db().await.collection::<User>("users")
     }
 }
