@@ -1,13 +1,13 @@
+use super::ServiceState;
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use reqwest::{header::HeaderMap, Client, Method};
 use serde_json::json;
 use std::sync::Arc;
-use super::ServiceState;
 
 pub async fn proxy_request(
     req: HttpRequest,
     body: web::Bytes,
-    state: web::Data<Arc<ServiceState>>,
+    state: web::Data<Arc<ServiceState>>
 ) -> impl Responder {
     // Extract the service name from the URL path
     let path: &str = req.path();
@@ -50,28 +50,40 @@ pub async fn proxy_request(
         Method::GET => {
             let mut headers = HeaderMap::new();
             headers.insert("Content-Type", "application/json".parse().unwrap());
-            headers.insert("X-User-ID", format!("675871badb5d7bdf5a8ba050").parse().unwrap());
+            headers.insert(
+                "X-User-ID",
+                format!("675871badb5d7bdf5a8ba050").parse().unwrap(),
+            );
             headers.insert("X-User-Role", "user".parse().unwrap());
             client.get(&uri).headers(headers).send().await
         }
         Method::POST => {
             let mut headers = HeaderMap::new();
             headers.insert("Content-Type", "application/json".parse().unwrap());
-            headers.insert("X-User-ID", format!("675871badb5d7bdf5a8ba050").parse().unwrap());
+            headers.insert(
+                "X-User-ID",
+                format!("675871badb5d7bdf5a8ba050").parse().unwrap(),
+            );
             headers.insert("X-User-Role", "user".parse().unwrap());
             client.post(&uri).headers(headers).body(body).send().await
         }
         Method::PUT => {
             let mut headers = HeaderMap::new();
             headers.insert("Content-Type", "application/json".parse().unwrap());
-            headers.insert("X-User-ID", format!("675871badb5d7bdf5a8ba050").parse().unwrap());
+            headers.insert(
+                "X-User-ID",
+                format!("675871badb5d7bdf5a8ba050").parse().unwrap(),
+            );
             headers.insert("X-User-Role", "user".parse().unwrap());
             client.put(&uri).headers(headers).body(body).send().await
         }
         Method::DELETE => {
             let mut headers = HeaderMap::new();
             headers.insert("Content-Type", "application/json".parse().unwrap());
-            headers.insert("X-User-ID", format!("675871badb5d7bdf5a8ba050").parse().unwrap());
+            headers.insert(
+                "X-User-ID",
+                format!("675871badb5d7bdf5a8ba050").parse().unwrap(),
+            );
             headers.insert("X-User-Role", "user".parse().unwrap());
             client.delete(&uri).headers(headers).body(body).send().await
         }
@@ -86,9 +98,10 @@ pub async fn proxy_request(
     match response {
         Ok(resp) => {
             let status = resp.status();
-            let body = resp.json::<serde_json::Value>().await.unwrap_or_else(|_| {
-                json!({ "error": "Error reading response from backend" })
-            });
+            let body = resp
+                .json::<serde_json::Value>()
+                .await
+                .unwrap_or_else(|_| json!({ "error": "Error reading response from backend" }));
             HttpResponse::build(status).json(body)
         }
         Err(err) => HttpResponse::InternalServerError().json(json!({

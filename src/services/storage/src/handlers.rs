@@ -30,7 +30,7 @@ pub async fn upload_file(app_state: web::Data<AppState>, mut payload: Multipart)
             // Upload file to storage
             match storage_service.upload_file(&rename_file, file_extension, &file_data).await {
                 Ok(file) => {
-                    let url = format!("{}/images/{}", String::from("http://127.0.0.1:9000"), rename_file.clone());
+                    let url = format!("{}/storage/images/{}", String::from("http://127.0.0.1:9000"), rename_file.clone());
                     // Save file metadata to MongoDB
                     let metadata = FileMetadata {
                         id: None,

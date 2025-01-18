@@ -1,4 +1,4 @@
-use jsonwebtoken::{decode, encode, DecodingKey, EncodingKey, Header, TokenData, Validation};
+use jsonwebtoken::{encode, EncodingKey, Header};
 use serde::{Deserialize, Serialize};
 use std::time::{SystemTime, UNIX_EPOCH};
 
@@ -26,16 +26,5 @@ pub fn create_token(user_id: &str, secret: &str) -> Result<String, JwtError> {
         &Header::default(),
         &claims,
         &EncodingKey::from_secret(secret.as_bytes()),
-    )
-}
-
-pub fn validate_token(
-    token: &str,
-    secret: &str,
-) -> Result<TokenData<Claims>, JwtError> {
-    decode::<Claims>(
-        token,
-        &DecodingKey::from_secret(secret.as_bytes()),
-        &Validation::default(),
     )
 }
