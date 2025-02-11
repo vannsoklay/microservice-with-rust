@@ -23,8 +23,6 @@ pub async fn get_user(state: web::Data<AppState>, req: HttpRequest) -> impl Resp
         Err(err) => return err,
     };
 
-    println!("user_id {}", user_id);
-
     // Find the user by ID
     let user = match collection.find_one(doc! { "_id": user_id }).await {
         Ok(Some(user)) => user,

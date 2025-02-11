@@ -32,9 +32,8 @@ async fn main() -> std::io::Result<()> {
         App::new()
             .wrap(Logger::default())
             .app_data(web::Data::new(state.clone()))
-            .route("/health", web::get().to(health_check)) // Health check endpoint
+            .route("/health", web::get().to(health_check))
             .service(login::login)
-            .wrap(AuthMiddleware) // Register the authentication middleware
             .route("/{tail:.*}", web::route().to(proxy_request))
             .default_service(web::route().to(|| HttpResponse::NotFound()))
             .wrap(cors)
