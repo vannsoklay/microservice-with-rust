@@ -1,4 +1,4 @@
-use crate::{identify::identify, models::Booking, AppState};
+use crate::{identify::identify, models::Property, AppState};
 use actix_web::{web, HttpRequest, HttpResponse, Responder};
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, to_document, DateTime};
@@ -11,7 +11,7 @@ pub struct ParamQuery {
     limit: i64,
 }
 
-pub async fn get_all_bookings(
+pub async fn get_all_properties(
     state: web::Data<AppState>,
     query: web::Query<ParamQuery>,
     req: HttpRequest,
@@ -32,17 +32,17 @@ pub async fn get_all_bookings(
 
     match cursor {
         Ok(mut cursor) => {
-            let mut bookings = vec![];
-            while let Some(booking) = cursor.try_next().await.unwrap_or(None) {
-                bookings.push(booking);
+            let mut properties = vec![];
+            while let Some(property) = cursor.try_next().await.unwrap_or(None) {
+                properties.push(property);
             }
-            let booking_count = collection
+            let property_count = collection
                 .count_documents(doc! { "user_id": user_id.clone() })
                 .await
                 .unwrap_or(0);
             HttpResponse::Ok().json(json!({
-                "data": bookings,
-                "total": booking_count,
+                "data": properties,
+                "total": property_count,
                 "page": param.skip
             }))
         }
@@ -50,9 +50,9 @@ pub async fn get_all_bookings(
     }
 }
 
-pub async fn get_booking_by_id(
+pub async fn get_property_by_id(
     state: web::Data<AppState>,
-    booking_id: web::Path<String>,
+    property_id: web::Path<String>,
     req: HttpRequest,
 ) -> impl Responder {
     let collection = state.config_db.clone();
@@ -62,19 +62,19 @@ pub async fn get_booking_by_id(
         Err(err) => return err,
     };
 
-    let booking = collection
-        .find_one(doc! { "_id": booking_id.into_inner().to_string(), "user_id": user_id })
+    let property = collection
+        .find_one(doc! { "_id": property_id.into_inner().to_string(), "user_id": user_id })
         .await;
 
-    match booking.unwrap() {
-        Some(booking) => HttpResponse::Ok().json(booking),
+    match property.unwrap() {
+        Some(property) => HttpResponse::Ok().json(property),
         None => HttpResponse::NotFound().finish(),
     }
 }
 
-pub async fn create_booking(
+pub async fn create_property(
     state: web::Data<AppState>,
-    new_booking: web::Json<Booking>,
+    new_perperty: web::Json<Property>,
     req: HttpRequest,
 ) -> impl Responder {
     let collection = state.config_db.clone();
@@ -84,13 +84,13 @@ pub async fn create_booking(
         Err(err) => return err,
     };
 
-    let mut new_booking = new_booking.into_inner();
-    new_booking.id = Some(ObjectId::new().to_string());
-    new_booking.user_id = Some(user_id.clone());
-    new_booking.created_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
-    new_booking.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
+    let mut new_perperty = new_perperty.into_inner();
+    new_perperty.id = Some(ObjectId::new().to_string());
+    new_perperty.owner_id = Some(user_id.clone());
+    new_perperty.created_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
+    new_perperty.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
 
-    let result = collection.insert_one(new_booking).await;
+    let result = collection.insert_one(new_perperty).await;
 
     match result {
         Ok(insert_result) => HttpResponse::Created().json(insert_result.inserted_id),
@@ -98,10 +98,10 @@ pub async fn create_booking(
     }
 }
 
-pub async fn update_booking(
+pub async fn update_property(
     state: web::Data<AppState>,
-    booking_id: web::Path<String>,
-    updated_booking: web::Json<Booking>,
+    property_id: web::Path<String>,
+    updated_property: web::Json<Property>,
     req: HttpRequest,
 ) -> impl Responder {
     let collection = state.config_db.clone();
@@ -111,30 +111,30 @@ pub async fn update_booking(
         Err(err) => return err,
     };
 
-    let id = match ObjectId::parse_str(&*booking_id) {
+    let id = match ObjectId::parse_str(&*property_id) {
         Ok(parsed_id) => parsed_id.to_string(),
-        Err(_) => return HttpResponse::BadRequest().body("Invalid booking ID"),
+        Err(_) => return HttpResponse::BadRequest().body("Invalid property ID"),
     };
 
-    let mut updated_booking = updated_booking.into_inner();
-    updated_booking.user_id = Some(user_id.clone());
-    updated_booking.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
+    let mut updated_property = updated_property.into_inner();
+    updated_property.owner_id = Some(user_id.clone());
+    updated_property.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
 
-    let update_doc = match to_document(&updated_booking) {
+    let update_doc = match to_document(&updated_property) {
         Ok(mut doc) => {
             doc.remove("_id");
             doc.remove("created_at");
             doc
         }
         Err(err) => {
-            eprintln!("Failed to serialize updated booking: {:?}", err);
+            eprintln!("Failed to serialize updated property: {:?}", err);
             return HttpResponse::BadRequest().body("Failed to process data");
         }
     };
 
     let result = collection
         .update_one(
-            doc! { "_id": id, "user_id": user_id.clone() },
+            doc! { "_id": id, "owner_id": user_id.clone() },
             doc! { "$set": update_doc },
         )
         .await;
@@ -144,27 +144,27 @@ pub async fn update_booking(
             if update_result.matched_count == 1 {
                 HttpResponse::Ok().json(update_result)
             } else {
-                HttpResponse::NotFound().body("Booking not found")
+                HttpResponse::NotFound().body("Property not found")
             }
         }
         Err(err) => {
             eprintln!("MongoDB update error: {:?}", err);
-            HttpResponse::BadRequest().body("Failed to update booking")
+            HttpResponse::BadRequest().body("Failed to update property")
         }
     }
 }
 
-pub async fn delete_booking(
+pub async fn delete_property(
     state: web::Data<AppState>,
-    booking_id: web::Path<String>,
+    property_id: web::Path<String>,
     req: HttpRequest,
 ) -> impl Responder {
-    let id = match ObjectId::parse_str(&*booking_id) {
+    let id = match ObjectId::parse_str(&*property_id) {
         Ok(parsed_id) => parsed_id,
         Err(_) => {
             return HttpResponse::BadRequest().json(json!({
-                "error": "Invalid booking ID",
-                "message": "The provided booking ID is not a valid ObjectId"
+                "error": "Invalid property ID",
+                "message": "The provided property ID is not a valid ObjectId"
             }))
         }
     };
@@ -174,23 +174,23 @@ pub async fn delete_booking(
         Err(error_response) => return error_response,
     };
 
-    let collection = state.config_db.clone();
+    let collection =state.config_db.clone();
 
     match collection
         .delete_one(doc! {
             "_id": id.to_string(),
-            "user_id": user_id
+            "owner_id": user_id
         })
         .await
     {
         Ok(delete_result) => match delete_result.deleted_count {
             1 => HttpResponse::Ok().json(json!({
-                "message": "Booking successfully deleted",
-                "booking_id": booking_id.to_string()
+                "message": "Property successfully deleted",
+                "property_id": property_id.to_string()
             })),
             0 => HttpResponse::NotFound().json(json!({
                 "error": "Not Found",
-                "message": "Booking not found or you do not have permission to delete it"
+                "message": "Property not found or you do not have permission to delete it"
             })),
             _ => HttpResponse::InternalServerError().json(json!({
                 "error": "Unexpected Delete Result",
@@ -198,10 +198,10 @@ pub async fn delete_booking(
             })),
         },
         Err(db_error) => {
-            eprintln!("Database error during booking deletion: {:?}", db_error);
+            eprintln!("Database error during property deletion: {:?}", db_error);
             HttpResponse::InternalServerError().json(json!({
                 "error": "Database Operation Failed",
-                "message": "An error occurred while attempting to delete the booking"
+                "message": "An error occurred while attempting to delete the property"
             }))
         }
     }

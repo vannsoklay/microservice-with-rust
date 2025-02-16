@@ -7,8 +7,9 @@ ROOT_DIR_SERVICE="target/release"
 # Define services and their locations
 declare -A SERVICES
 SERVICES["gateway"]="${ROOT_DIR_SERVICE}/root-microservice.exe"
-SERVICES["service1"]="${ROOT_DIR}/user/${ROOT_DIR_SERVICE}/user.exe"
-SERVICES["service2"]="${ROOT_DIR}/accommodation/${ROOT_DIR_SERVICE}/accommodation.exe"
+SERVICES["user"]="${ROOT_DIR}/user/${ROOT_DIR_SERVICE}/user.exe"
+SERVICES["accommodation"]="${ROOT_DIR}/accommodation/${ROOT_DIR_SERVICE}/accommodation.exe"
+SERVICES["booking"]="${ROOT_DIR}/booking/${ROOT_DIR_SERVICE}/accommodation.exe"
 # SERVICES["service3"]="${ROOT_DIR}/storage/${ROOT_DIR_SERVICE}/storage.exe"
 
 LOG_DIR="$HOME/log/my_services"
