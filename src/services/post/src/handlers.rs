@@ -25,7 +25,7 @@ pub async fn get_all_posts(
     };
 
     let cursor = collection
-        .find(doc! { "user_id": user_id.clone() })
+        .find(doc! { "author": user_id.clone() })
         .skip(param.skip)
         .limit(param.limit)
         .await;
@@ -37,7 +37,7 @@ pub async fn get_all_posts(
                 posts.push(post);
             }
             let post_count = collection
-                .count_documents(doc! { "user_id": user_id.clone() })
+                .count_documents(doc! { "author": user_id.clone() })
                 .await
                 .unwrap_or(0);
             HttpResponse::Ok().json(json!({
@@ -122,7 +122,7 @@ pub async fn update_post(
 
     let mut updated_post = updated_post.into_inner();
     updated_post.author = Some(user_id.clone());
-    updated_post.updated_at = Some(DateTime::now());
+    updated_post.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
 
     let update_doc = match to_document(&updated_post) {
         Ok(mut doc) => {
@@ -138,7 +138,7 @@ pub async fn update_post(
 
     let result = collection
         .update_one(
-            doc! { "_id": id, "user_id": user_id.clone() },
+            doc! { "_id": id, "author": user_id.clone() },
             doc! { "$set": update_doc },
         )
         .await;
@@ -183,7 +183,7 @@ pub async fn delete_post(
     match collection
         .delete_one(doc! {
             "_id": id.to_string(),
-            "user_id": user_id
+            "author": user_id
         })
         .await
     {

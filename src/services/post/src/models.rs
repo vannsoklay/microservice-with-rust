@@ -19,8 +19,9 @@ pub struct Post {
     pub images_url: Vec<String>,
     pub tags: Option<Vec<String>>,
     pub post_type: PostType,
-    pub created_at: Option<DateTime>,
-    pub updated_at: Option<DateTime>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub deleted_at: Option<String>,
 }
 
 impl Post {
@@ -42,13 +43,14 @@ impl Post {
             images_url,
             tags,
             post_type,
-            created_at: Some(DateTime::now()),
+            created_at: Some(DateTime::now().try_to_rfc3339_string().unwrap()),
             updated_at: None,
+            deleted_at: None
         }
     }
 
     pub fn update_content(&mut self, new_content: String) {
         self.content = new_content;
-        self.updated_at = Some(DateTime::now());
+        self.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
     }
 }
