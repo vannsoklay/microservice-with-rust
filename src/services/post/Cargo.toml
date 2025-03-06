@@ -9,5 +9,6 @@ mongodb = "*"
 serde = { version = "*", features = ["derive"] }
 serde_json = "*"
 futures-util = "*"
+regex = "*"
 chrono = "*"
 clap = { version = "*", features = ["derive"] }

@@ -1,7 +1,7 @@
 use mongodb::bson::{oid::ObjectId, DateTime};
 use serde::{Deserialize, Serialize};
 
-use crate::utils::generate_permlink;
+use crate::utils::generate_permalink;
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub enum PostType {
@@ -11,12 +11,13 @@ pub enum PostType {
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Post {
-    pub _id: Option<String>,
+    #[serde(rename = "_id")]
+    pub id: Option<String>,
     pub title: Option<String>,
-    pub permlink: Option<String>,
+    pub permalink: Option<String>,
     pub content: String,
     pub author: Option<String>,
-    pub images_url: Vec<String>,
+    pub media_urls: Vec<String>,
     pub tags: Option<Vec<String>>,
     pub post_type: PostType,
     pub created_at: Option<String>,
@@ -30,27 +31,22 @@ impl Post {
         author: String,
         post_type: PostType,
         title: Option<String>,
-        images_url: Vec<String>,
+        media_urls: Vec<String>,
         tags: Option<Vec<String>>,
     ) -> Self {
-        let permlink = generate_permlink(title.as_ref());
+        let permalink = generate_permalink(title.as_ref());
         Self {
-            _id: Some(ObjectId::new().to_hex()),
+            id: Some(ObjectId::new().to_hex()),
             title,
             content,
-            permlink: Some(permlink),
+            permalink: Some(permalink),
             author: Some(author),
-            images_url,
+            media_urls,
             tags,
             post_type,
             created_at: Some(DateTime::now().try_to_rfc3339_string().unwrap()),
-            updated_at: None,
-            deleted_at: None
+            updated_at: Some(DateTime::now().try_to_rfc3339_string().unwrap()),
+            deleted_at: None,
         }
-    }
-
-    pub fn update_content(&mut self, new_content: String) {
-        self.content = new_content;
-        self.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
     }
 }

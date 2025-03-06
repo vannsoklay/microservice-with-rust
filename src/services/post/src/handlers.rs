@@ -90,7 +90,7 @@ pub async fn create_post(
         user_id,
         post.post_type.clone(),
         post.title.clone(),
-        post.images_url.clone(),
+        post.media_urls.clone(),
         post.tags.clone(),
     );
 
@@ -127,6 +127,7 @@ pub async fn update_post(
     let update_doc = match to_document(&updated_post) {
         Ok(mut doc) => {
             doc.remove("_id");
+            doc.remove("permalink");
             doc.remove("created_at");
             doc
         }
