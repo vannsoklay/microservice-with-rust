@@ -1,0 +1,14 @@
+[package]
+name = "product"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "*"
+mongodb = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+futures-util = "*"
+regex = "*"
+chrono = "*"
+clap = { version = "*", features = ["derive"] }
