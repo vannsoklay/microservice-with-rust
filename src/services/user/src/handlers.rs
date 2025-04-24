@@ -8,7 +8,6 @@ use argon2::{
 use mongodb::bson::doc;
 use serde_json::json;
 
-// get user
 pub async fn get_user(state: web::Data<AppState>, req: HttpRequest) -> impl Responder {
     let collection = state.db.collection::<User>("users");
 
@@ -23,7 +22,6 @@ pub async fn get_user(state: web::Data<AppState>, req: HttpRequest) -> impl Resp
     HttpResponse::Ok().json(response)
 }
 
-// change password
 pub async fn change_password(
     body: web::Json<ChangePasswordRequest>,
     req: HttpRequest,

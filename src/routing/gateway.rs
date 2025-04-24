@@ -50,8 +50,6 @@ pub async fn forward_request(
     }
     headers.insert("Content-Type", "application/json".parse().unwrap());
 
-    println!("Headers: {:?}", claims);
-
     if let Some(claims) = claims {
         headers.insert("X-Service-Key", "key_accommodation".parse().unwrap());
         headers.insert("X-User-ID", claims.sub.parse().unwrap());

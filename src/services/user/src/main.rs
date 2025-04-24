@@ -36,7 +36,6 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on port {}", port);
 
-    // Create AppState
     let app_state = web::Data::new(AppState { db });
 
     HttpServer::new(move || {
@@ -44,8 +43,11 @@ async fn main() -> std::io::Result<()> {
             .app_data(app_state.clone())
             .wrap(Logger::default())
             .wrap(middleware::AuthMiddleware::new(vec![]))
-            .route("/api/v1/user", web::get().to(get_user))
-            .route("/api/v1/user/password", web::post().to(change_password))
+            .service(
+                web::scope("/api/v1/user")
+                    .route("", web::get().to(get_user))
+                    .route("/password", web::post().to(change_password)),
+            )
     })
     .bind(&bind_address)?
     .run()
