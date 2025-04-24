@@ -1,14 +1,13 @@
-use actix_web::{web, App, HttpServer};
+use crate::handlers::{change_password, get_user};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use clap::Parser;
-use crate::handlers::{get_user, register, login, change_password};
-use mongodb::{Database, Client};
-   
-mod models;
-mod handlers;
-mod response;
-mod identify;
-mod db;
+use mongodb::{Client, Database};
 
+mod db;
+mod handlers;
+mod middleware;
+mod models;
+mod response;
 #[derive(Parser)]
 struct Cli {
     #[clap(short, long, default_value = "8083")]
@@ -21,10 +20,15 @@ pub struct AppState {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+    env_logger::init();
+
     let args = Cli::parse();
 
     // Initialize MongoDB client
-    let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
+    let client = Client::with_uri_str("mongodb://localhost:27017")
+        .await
+        .unwrap();
     let db = client.database("microservice-db");
 
     let port = args.port;
@@ -32,17 +36,18 @@ async fn main() -> std::io::Result<()> {
 
     println!("Starting server on port {}", port);
 
-     // Create AppState
-     let app_state = web::Data::new(AppState { db });
+    // Create AppState
+    let app_state = web::Data::new(AppState { db });
 
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
-            .route("/user", web::get().to(get_user))
-            .route("/user/password", web::post().to(change_password))
+            .wrap(Logger::default())
+            .wrap(middleware::AuthMiddleware::new(vec![]))
+            .route("/api/v1/user", web::get().to(get_user))
+            .route("/api/v1/user/password", web::post().to(change_password))
     })
     .bind(&bind_address)?
     .run()
     .await
-    
 }

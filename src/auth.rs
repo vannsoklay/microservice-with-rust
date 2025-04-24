@@ -1,4 +1,4 @@
-use actix_web::{cookie::Cookie, dev::ServiceRequest, HttpRequest, HttpResponse};
+use actix_web::dev::ServiceRequest;
 use jsonwebtoken::{decode, DecodingKey, Validation};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -10,7 +10,8 @@ pub struct Claims {
     pub exp: usize,
 }
 
-pub fn verify_jwt_from_header(
+pub fn 
+verify_jwt_from_header(
     req: &ServiceRequest,
     secret: &str,
 ) -> Result<Claims, actix_web::HttpResponse> {

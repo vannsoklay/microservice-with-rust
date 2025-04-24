@@ -7,7 +7,6 @@ pub fn global_variables(key: String) -> String {
 }
 
 pub fn public_service(path: &str) -> bool {
-    println!("path {}", path);
     if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" {
         return true;
     }
@@ -16,17 +15,21 @@ pub fn public_service(path: &str) -> bool {
 
 pub fn detect_service(path: &str) -> Option<&'static str> {
     let path = path.strip_prefix("/api/v1")?;
-    if path.starts_with("/auth") {
-        Some("auth")
-    } else if path.starts_with("/user") {
-        Some("user")
-    } else if path.starts_with("/accommodation") {
-        Some("accommodation")
-    } else if path.starts_with("/order") {
-        Some("order")
-    } else {
-        None
+
+    let services = [
+        ("/auth", "auth"),
+        ("/user", "user"),
+        ("/accommodations", "accommodation"),
+        ("/orders", "order"),
+    ];
+
+    for (prefix, name) in services.iter() {
+        if path.starts_with(prefix) {
+            return Some(*name);
+        }
     }
+
+    None
 }
 
 pub fn build_uri(base: &str, path: &str, query: &str) -> String {

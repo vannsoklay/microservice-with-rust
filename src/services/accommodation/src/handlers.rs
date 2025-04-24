@@ -1,5 +1,5 @@
-use crate::{identify::identify, models::Accommodation, AppState};
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use crate::{models::Accommodation, AppState};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use chrono::Utc;
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, to_document};
@@ -16,7 +16,6 @@ pub struct ParamQuery {
 pub async fn list_accommodations(
     state: web::Data<AppState>,
     query: web::Query<ParamQuery>,
-    req: HttpRequest,
 ) -> impl Responder {
     let collection = state.db.collection::<Accommodation>("accommodations");
     let param = query.into_inner();
@@ -52,11 +51,8 @@ pub async fn get_all_accommodations(
 ) -> impl Responder {
     let collection = state.db.collection::<Accommodation>("accommodations");
     let param = query.into_inner();
-
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    
+    let user_id = req.extensions().get::<String>().cloned();
 
     let cursor = collection
         .find(doc! { "owner_id" : user_id.clone() })
@@ -92,11 +88,7 @@ pub async fn get_accommodation_by_id(
 ) -> impl Responder {
     let collection = state.db.collection::<Accommodation>("accommodations");
 
-    // Identify the user
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let user_id = req.extensions().get::<String>().cloned();
 
     let accommodation = collection
         .find_one(doc! { "_id": accommodation_id.into_inner().to_string(), "owner_id": user_id })
@@ -116,15 +108,12 @@ pub async fn create_accommodation(
 ) -> impl Responder {
     let collection = state.db.collection::<Accommodation>("accommodations");
 
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let user_id = req.extensions().get::<String>().cloned();
 
     // Clone the incoming data and set additional fields
     let mut new_accommodation = new_accommodation.into_inner();
     new_accommodation.id = ObjectId::new().to_string(); // Generate a new ObjectId
-    new_accommodation.owner_id = Some(user_id);
+    new_accommodation.owner_id = user_id;
     new_accommodation.created_at = Utc::now().to_rfc3339();
     new_accommodation.updated_at = Utc::now().to_rfc3339();
 
@@ -146,10 +135,7 @@ pub async fn update_accommodation(
     let collection = state.db.collection::<Accommodation>("accommodations");
 
     // Identify the user
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let user_id = req.extensions().get::<String>().cloned();
 
     // Parse the provided ObjectId
     let id = match ObjectId::parse_str(&*accommodation_id) {
@@ -159,7 +145,7 @@ pub async fn update_accommodation(
 
     // Prepare the update document
     let mut updated_accommodation = updated_accommodation.into_inner();
-    updated_accommodation.owner_id = Some(user_id.clone());
+    updated_accommodation.owner_id = user_id.clone();
     updated_accommodation.updated_at = Utc::now().to_rfc3339();
 
     // Serialize the updated data into a BSON document
@@ -216,10 +202,7 @@ pub async fn delete_accommodation(
     };
 
     // Identify the user
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(error_response) => return error_response,
-    };
+    let user_id = req.extensions().get::<String>().cloned();
 
     // Prepare the database collection
     let collection = state.db.collection::<Accommodation>("accommodations");

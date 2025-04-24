@@ -50,12 +50,15 @@ pub async fn forward_request(
     }
     headers.insert("Content-Type", "application/json".parse().unwrap());
 
+    println!("Headers: {:?}", claims);
+
     if let Some(claims) = claims {
-        if let Ok(user_id) = claims.sub.parse() {
-            headers.insert("X-User-ID", user_id);
-        }
+        headers.insert("X-Service-Key", "key_accommodation".parse().unwrap());
+        headers.insert("X-User-ID", claims.sub.parse().unwrap());
+        headers.insert("X-User-Role", claims.role.parse().unwrap());
     }
-    headers.insert("x-jwt-secret", "1234".parse().unwrap());
+
+    headers.insert("x-jwt-secret", "123456789".parse().unwrap());
     builder = builder.headers(headers);
 
     let response = builder.body(body).send().await;

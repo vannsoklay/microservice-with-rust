@@ -11,3 +11,8 @@ serde_json = "*"
 futures-util = "*"
 chrono = "*"
 clap = { version = "*", features = ["derive"] }
+futures = "*"
+constant_time_eq = "0.3.1"
+log = "*"
+dotenv = "*"
+env_logger = "*"

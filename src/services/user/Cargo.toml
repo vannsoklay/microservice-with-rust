@@ -13,3 +13,8 @@ clap = { version = "*", features = ["derive"] }
 futures-util = "*"
 argon2 = "0.5.3"
 jsonwebtoken = "*"
+futures = "*"
+constant_time_eq = "0.3.1"
+log = "*"
+dotenv = "*"
+env_logger = "*"
