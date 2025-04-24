@@ -26,6 +26,7 @@ pub async fn get_all_posts(
 
     let cursor = collection
         .find(doc! { "author": user_id.clone() })
+        .sort(doc! { "created_at": -1 })
         .skip(param.skip)
         .limit(param.limit)
         .await;

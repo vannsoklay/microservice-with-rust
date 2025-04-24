@@ -1,0 +1,15 @@
+[package]
+name = "user"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+actix-web = "*"
+mongodb = "*"
+serde = { version = "*", features = ["derive"] }
+serde_json = "*"
+chrono = "*"
+clap = { version = "*", features = ["derive"] }
+futures-util = "*"
+argon2 = "0.5.3"
+jsonwebtoken = "*"

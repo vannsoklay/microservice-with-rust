@@ -13,6 +13,38 @@ pub struct ParamQuery {
 }
 
 // get all accommodations
+pub async fn list_accommodations(
+    state: web::Data<AppState>,
+    query: web::Query<ParamQuery>,
+    req: HttpRequest,
+) -> impl Responder {
+    let collection = state.db.collection::<Accommodation>("accommodations");
+    let param = query.into_inner();
+
+    let cursor = collection
+        .find(doc! {})
+        .skip(param.skip.to_owned())
+        .limit(param.limit.to_owned())
+        .await;
+
+    match cursor {
+        Ok(mut cursor) => {
+            let mut accommodations = vec![];
+            while let Some(accommodation) = cursor.try_next().await.unwrap_or(None) {
+                accommodations.push(accommodation);
+            }
+            let accoummodation_count = collection.count_documents(doc! {}).await.unwrap_or(0);
+            HttpResponse::Ok().json(serde_json::json!({
+                "data": accommodations,
+                "total": accoummodation_count,
+                "page": param.skip.to_owned()
+            }))
+        }
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+// get all accommodations
 pub async fn get_all_accommodations(
     state: web::Data<AppState>,
     query: web::Query<ParamQuery>,

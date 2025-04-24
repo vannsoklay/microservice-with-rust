@@ -1,19 +1,24 @@
 mod auth;
+mod handler;
 mod health;
 mod middleware;
 mod routing;
+mod utils;
 
 use std::sync::Arc;
 
 use actix_cors::Cors;
 use actix_web::{http, middleware::Logger, web, App, HttpResponse, HttpServer};
-use auth::login;
+use dotenv::dotenv;
+use handler::forward_request;
 use health::health_check;
-use middleware::AuthMiddleware;
-use routing::{load_balancer::proxy_request, ServiceState};
+use middleware::jwt::JwtMiddleware;
+use routing::ServiceState;
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv().ok();
+    tracing_subscriber::fmt::init();
     let state = Arc::new(ServiceState::new());
 
     HttpServer::new(move || {
@@ -33,8 +38,10 @@ async fn main() -> std::io::Result<()> {
             .wrap(Logger::default())
             .app_data(web::Data::new(state.clone()))
             .route("/health", web::get().to(health_check))
-            .service(login::login)
-            .route("/{tail:.*}", web::route().to(proxy_request))
+            .wrap(JwtMiddleware {
+                secret: std::env::var("JWT_SECRET").expect("JWT_SECRET missing"),
+            })
+            .route("/api/v1/{tail:.*}", web::route().to(forward_request))
             .default_service(web::route().to(|| HttpResponse::NotFound()))
             .wrap(cors)
     })
