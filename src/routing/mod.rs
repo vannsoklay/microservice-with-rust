@@ -2,6 +2,7 @@ use std::sync::atomic::{AtomicUsize, Ordering};
 use reqwest::Client;
 
 pub mod load_balancer;
+pub mod gateway;
 
 // Define backends for different services
 const AUTH_BACKENDS: [&str; 1] = ["http://localhost:8089"];

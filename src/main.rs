@@ -1,5 +1,4 @@
 mod auth;
-mod handler;
 mod health;
 mod middleware;
 mod routing;
@@ -10,10 +9,9 @@ use std::sync::Arc;
 use actix_cors::Cors;
 use actix_web::{http, middleware::Logger, web, App, HttpResponse, HttpServer};
 use dotenv::dotenv;
-use handler::forward_request;
 use health::health_check;
 use middleware::jwt::JwtMiddleware;
-use routing::ServiceState;
+use routing::{ServiceState, gateway::forward_request};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
