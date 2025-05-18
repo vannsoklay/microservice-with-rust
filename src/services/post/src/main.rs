@@ -1,12 +1,15 @@
-use crate::handlers::{create_post, delete_post, get_all_posts, get_post_by_id, update_post};
+use crate::handlers::{
+    create_post, delete_post, get_all_posts, get_all_posts_by_user, get_post_by_user, update_post,
+};
 use actix_web::{web, App, HttpServer};
 use clap::Parser;
 use db::DBConfig;
-use models::Post;
+use models::{Post, User};
 
 mod db;
 mod handlers;
 mod identify;
+mod middleware;
 mod models;
 mod response;
 mod utils;
@@ -18,14 +21,19 @@ struct Cli {
 }
 
 pub struct AppState {
-    pub config_db: mongodb::Collection<Post>,
+    pub post_db: mongodb::Collection<Post>,
+    pub user_db: mongodb::Collection<User>,
 }
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let args = Cli::parse();
+    dotenv::dotenv().ok();
+    env_logger::init();
 
-    let config_db = DBConfig::post_collection().await;
+    let args: Cli = Cli::parse();
+
+    let post_db = DBConfig::post_collection().await;
+    let user_db = DBConfig::user_collection().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
@@ -33,16 +41,23 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on port {}", port);
 
     // Create AppState
-    let app_state = web::Data::new(AppState { config_db });
+    let app_state = web::Data::new(AppState { post_db, user_db });
+
+    let public_paths = vec!["/api/v1/posts/all".to_string()];
 
     HttpServer::new(move || {
         App::new()
             .app_data(app_state.clone())
-            .route("/posts", web::get().to(get_all_posts))
-            .route("/posts/{id}", web::get().to(get_post_by_id))
-            .route("/posts", web::post().to(create_post))
-            .route("/posts/{id}", web::put().to(update_post))
-            .route("/posts/{id}", web::delete().to(delete_post))
+            .wrap(middleware::AuthMiddleware::new(public_paths.clone()))
+            .service(
+                web::scope("/api/v1/posts")
+                    .route("/all", web::get().to(get_all_posts))
+                    .route("", web::get().to(get_all_posts_by_user))
+                    .route("", web::post().to(create_post))
+                    .route("/{id}", web::get().to(get_post_by_user))
+                    .route("/{id}", web::put().to(update_post))
+                    .route("/{id}", web::delete().to(delete_post)),
+            )
     })
     .bind(&bind_address)?
     .run()

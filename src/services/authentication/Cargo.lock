@@ -326,6 +326,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "authentication"
+version = "0.1.0"
+dependencies = [
+ "actix-web",
+ "argon2",
+ "chrono",
+ "clap",
+ "futures-util",
+ "jsonwebtoken",
+ "mongodb",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
 name = "autocfg"
 version = "1.4.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2435,21 +2450,6 @@ dependencies = [
  "form_urlencoded",
  "idna",
  "percent-encoding",
-]
-
-[[package]]
-name = "user"
-version = "0.1.0"
-dependencies = [
- "actix-web",
- "argon2",
- "chrono",
- "clap",
- "futures-util",
- "jsonwebtoken",
- "mongodb",
- "serde",
- "serde_json",
 ]
 
 [[package]]

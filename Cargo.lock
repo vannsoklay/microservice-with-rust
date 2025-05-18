@@ -660,6 +660,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "gateway"
+version = "0.1.0"
+dependencies = [
+ "actix-cors",
+ "actix-service",
+ "actix-web",
+ "chrono",
+ "dotenv",
+ "futures",
+ "futures-util",
+ "jsonwebtoken",
+ "reqwest",
+ "serde",
+ "serde_json",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "generic-array"
 version = "0.14.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1324,25 +1343,6 @@ dependencies = [
  "spin",
  "untrusted",
  "windows-sys 0.52.0",
-]
-
-[[package]]
-name = "root-microservice"
-version = "0.1.0"
-dependencies = [
- "actix-cors",
- "actix-service",
- "actix-web",
- "chrono",
- "dotenv",
- "futures",
- "futures-util",
- "jsonwebtoken",
- "reqwest",
- "serde",
- "serde_json",
- "tracing",
- "tracing-subscriber",
 ]
 
 [[package]]

@@ -51,7 +51,7 @@ pub async fn get_all_accommodations(
 ) -> impl Responder {
     let collection = state.db.collection::<Accommodation>("accommodations");
     let param = query.into_inner();
-    
+
     let user_id = req.extensions().get::<String>().cloned();
 
     let cursor = collection

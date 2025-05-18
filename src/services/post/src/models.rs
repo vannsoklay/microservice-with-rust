@@ -16,13 +16,19 @@ pub struct Post {
     pub title: Option<String>,
     pub permalink: Option<String>,
     pub content: String,
-    pub author: Option<String>,
+    pub author_id: Option<String>,
     pub media_urls: Vec<String>,
     pub tags: Option<Vec<String>>,
     pub post_type: PostType,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
     pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct User {
+    #[serde(rename(deserialize = "_id"))]
+    pub id: String,
 }
 
 impl Post {
@@ -40,7 +46,7 @@ impl Post {
             title,
             content,
             permalink: Some(permalink),
-            author: Some(author),
+            author_id: Some(author),
             media_urls,
             tags,
             post_type,

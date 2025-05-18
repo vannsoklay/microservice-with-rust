@@ -9,23 +9,18 @@ use serde_json::json;
 pub struct ParamQuery {
     skip: u64,
     limit: i64,
+    username: Option<String>,
 }
 
 pub async fn get_all_posts(
     state: web::Data<AppState>,
     query: web::Query<ParamQuery>,
-    req: HttpRequest,
 ) -> impl Responder {
-    let collection = state.config_db.clone();
-    let param = query.into_inner();
-
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let collection = state.post_db.clone();
+    let param: ParamQuery = query.into_inner();
 
     let cursor = collection
-        .find(doc! { "author": user_id.clone() })
+        .find(doc! {})
         .sort(doc! { "created_at": -1 })
         .skip(param.skip)
         .limit(param.limit)
@@ -37,8 +32,53 @@ pub async fn get_all_posts(
             while let Some(post) = cursor.try_next().await.unwrap_or(None) {
                 posts.push(post);
             }
-            let post_count = collection
-                .count_documents(doc! { "author": user_id.clone() })
+            let post_count = collection.count_documents(doc! {}).await.unwrap_or(0);
+            HttpResponse::Ok().json(json!({
+                "data": posts,
+                "total": post_count,
+                "page": param.skip
+            }))
+        }
+        Err(_) => HttpResponse::InternalServerError().finish(),
+    }
+}
+
+pub async fn get_all_posts_by_user(
+    state: web::Data<AppState>,
+    query: web::Query<ParamQuery>,
+) -> impl Responder {
+    let post_collection = state.post_db.clone();
+    let user_collection = state.user_db.clone();
+    let param = query.into_inner();
+
+    let author = match user_collection
+        .find_one(doc! { "username": param.username.clone() })
+        .await
+    {
+        Ok(user) => user,
+        Err(_) => None,
+    };
+    if author.is_none() {
+        return HttpResponse::NotFound().finish();
+    }
+
+    let author_id = author.unwrap();
+
+    let cursor = post_collection
+        .find(doc! { "author_id": author_id.id.to_owned() })
+        .sort(doc! { "created_at": -1 })
+        .skip(param.skip)
+        .limit(param.limit)
+        .await;
+
+    match cursor {
+        Ok(mut cursor) => {
+            let mut posts = vec![];
+            while let Some(post) = cursor.try_next().await.unwrap_or(None) {
+                posts.push(post);
+            }
+            let post_count = post_collection
+                .count_documents(doc! { "author_id": author_id.id.to_owned() })
                 .await
                 .unwrap_or(0);
             HttpResponse::Ok().json(json!({
@@ -51,12 +91,12 @@ pub async fn get_all_posts(
     }
 }
 
-pub async fn get_post_by_id(
+pub async fn get_post_by_user(
     state: web::Data<AppState>,
     post_id: web::Path<String>,
     req: HttpRequest,
 ) -> impl Responder {
-    let collection = state.config_db.clone();
+    let collection = state.post_db.clone();
 
     let author_id = match identify(req).await {
         Ok(id) => id,
@@ -69,8 +109,8 @@ pub async fn get_post_by_id(
 
     match post {
         Ok(Some(post)) => HttpResponse::Ok().json(post),
-        Ok(None) => HttpResponse::NotFound().json(json!({"error": "Post not found"})),
-        Err(err) => HttpResponse::InternalServerError().json(json!({"error": err.to_string()})),
+        Ok(None) => HttpResponse::NotFound().json(json!({"message": "Post not found"})),
+        Err(err) => HttpResponse::InternalServerError().json(json!({"message": err.to_string()})),
     }
 }
 
@@ -79,7 +119,7 @@ pub async fn create_post(
     post: web::Json<Post>,
     req: HttpRequest,
 ) -> impl Responder {
-    let collection = state.config_db.clone();
+    let collection = state.post_db.clone();
 
     let user_id = match identify(req).await {
         Ok(id) => id,
@@ -109,7 +149,7 @@ pub async fn update_post(
     updated_post: web::Json<Post>,
     req: HttpRequest,
 ) -> impl Responder {
-    let collection = state.config_db.clone();
+    let collection = state.post_db.clone();
 
     let user_id = match identify(req).await {
         Ok(id) => id,
@@ -122,7 +162,7 @@ pub async fn update_post(
     };
 
     let mut updated_post = updated_post.into_inner();
-    updated_post.author = Some(user_id.clone());
+    updated_post.author_id = Some(user_id.clone());
     updated_post.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
 
     let update_doc = match to_document(&updated_post) {
@@ -140,7 +180,7 @@ pub async fn update_post(
 
     let result = collection
         .update_one(
-            doc! { "_id": id, "author": user_id.clone() },
+            doc! { "_id": id, "author_id": user_id.clone() },
             doc! { "$set": update_doc },
         )
         .await;
@@ -180,12 +220,12 @@ pub async fn delete_post(
         Err(error_response) => return error_response,
     };
 
-    let collection = state.config_db.clone();
+    let collection = state.post_db.clone();
 
     match collection
         .delete_one(doc! {
             "_id": id.to_string(),
-            "author": user_id
+            "author_id": user_id
         })
         .await
     {

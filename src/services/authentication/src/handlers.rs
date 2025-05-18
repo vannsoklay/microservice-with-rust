@@ -67,13 +67,13 @@ pub async fn login(
             Ok(secret_str) => secret_str.to_string(),
             Err(_) => {
                 return HttpResponse::BadRequest().json(json!({
-                    "error": "Invalid JWT secret header format."
+                    "message": "Invalid JWT secret header format."
                 }));
             }
         },
         None => {
             return HttpResponse::BadRequest().json(json!({
-                "error": "Missing JWT secret in headers."
+                "message": "Missing JWT secret in headers."
             }));
         }
     };
@@ -85,7 +85,7 @@ pub async fn login(
         Ok(Some(user)) => user,
         _ => {
             return HttpResponse::Unauthorized()
-                .json(json!({ "error": "Invalid username or password" }));
+                .json(json!({ "message": "Invalid username or password" }));
         }
     };
 
@@ -93,7 +93,7 @@ pub async fn login(
         Ok(hash) => hash,
         Err(_) => {
             return HttpResponse::InternalServerError()
-                .json(json!({ "error": "Invalid password hash" }))
+                .json(json!({ "message": "Invalid password hash" }))
         }
     };
 
@@ -103,17 +103,18 @@ pub async fn login(
 
     if is_valid {
         match generate_jwt(&user.id.to_hex(), Some("user"), &jwt_secret) {
-            Ok(token) => HttpResponse::Ok().json(json!({
+            Ok(token) => HttpResponse::Created().json(json!({
                 "message": "Login successful.",
                 "access_token": token,
+                "user": user
             })),
             Err(_) => HttpResponse::InternalServerError().json(json!({
-                "error": "An error occurred while generating the access token."
+                "message": "An error occurred while generating the access token."
             })),
         }
     } else {
         HttpResponse::Unauthorized().json(json!({
-            "error": "Invalid credentials provided. Please check your username and password."
+            "message": "Invalid credentials provided. Please check your username and password."
         }))
     }
 }

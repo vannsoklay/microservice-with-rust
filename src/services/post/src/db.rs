@@ -2,7 +2,7 @@ use mongodb::{options::ClientOptions, Client, Collection, Database};
 
 pub struct DBConfig {}
 
-use crate::models::Post;
+use crate::models::{Post, User};
 
 async fn db() -> Database {
     let client_options = ClientOptions::parse("mongodb://localhost:27017")
@@ -25,5 +25,9 @@ async fn db() -> Database {
 impl DBConfig {
     pub async fn post_collection() -> Collection<Post> {
         db().await.collection::<Post>("posts")
+    }
+
+    pub async fn user_collection() -> Collection<User> {
+        db().await.collection::<User>("users")
     }
 }

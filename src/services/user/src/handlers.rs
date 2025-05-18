@@ -15,7 +15,7 @@ pub async fn get_user(state: web::Data<AppState>, req: HttpRequest) -> impl Resp
 
     let user = match collection.find_one(doc! { "_id": user_id }).await {
         Ok(Some(user)) => user,
-        _ => return HttpResponse::NotFound().json(json!({ "error": "User not found" })),
+        _ => return HttpResponse::NotFound().json(json!({ "message": "User not found" })),
     };
 
     let response = User::to_user(user);
@@ -32,14 +32,14 @@ pub async fn change_password(
 
     let user = match collection.find_one(doc! { "_id": user_id.clone() }).await {
         Ok(Some(user)) => user,
-        _ => return HttpResponse::NotFound().json(json!({ "error": "User not found" })),
+        _ => return HttpResponse::NotFound().json(json!({ "message": "User not found" })),
     };
 
     let parsed_hash = match PasswordHash::new(&user.password) {
         Ok(hash) => hash,
         Err(_) => {
             return HttpResponse::InternalServerError()
-                .json(json!({ "error": "Invalid password hash" }))
+                .json(json!({ "message": "Invalid password hash" }))
         }
     };
 
@@ -48,7 +48,7 @@ pub async fn change_password(
         .is_ok();
 
     if !is_old_password_valid {
-        return HttpResponse::Unauthorized().json(json!({ "error": "Invalid old password" }));
+        return HttpResponse::Unauthorized().json(json!({ "message": "Invalid old password" }));
     }
 
     // Generate a new salt and hash the new password
@@ -59,7 +59,7 @@ pub async fn change_password(
         Ok(hash) => hash.to_string(),
         Err(_) => {
             return HttpResponse::InternalServerError()
-                .json(json!({ "error": "Failed to hash new password" }))
+                .json(json!({ "message": "Failed to hash new password" }))
         }
     };
 
@@ -71,7 +71,7 @@ pub async fn change_password(
         )
         .await
     {
-        return HttpResponse::InternalServerError().json(json!({ "error": err.to_string() }));
+        return HttpResponse::InternalServerError().json(json!({ "message": err.to_string() }));
     }
 
     HttpResponse::Ok().json(json!({ "message": "Password changed successfully" }))

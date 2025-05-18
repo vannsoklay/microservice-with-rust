@@ -19,6 +19,7 @@ pub fn detect_service(path: &str) -> Option<&'static str> {
     let services = [
         ("/auth", "auth"),
         ("/user", "user"),
+        ("/posts", "post"),
         ("/accommodations", "accommodation"),
         ("/orders", "order"),
     ];
