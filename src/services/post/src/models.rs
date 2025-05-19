@@ -34,7 +34,7 @@ pub struct User {
 impl Post {
     pub fn new(
         content: String,
-        author: String,
+        author_id: Option<String>,
         post_type: PostType,
         title: Option<String>,
         media_urls: Vec<String>,
@@ -46,7 +46,7 @@ impl Post {
             title,
             content,
             permalink: Some(permalink),
-            author_id: Some(author),
+            author_id,
             media_urls,
             tags,
             post_type,

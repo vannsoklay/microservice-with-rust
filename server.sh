@@ -12,7 +12,7 @@ SERVICES["authentication"]="${ROOT_DIR}/authentication/${ROOT_DIR_SERVICE}/authe
 SERVICES["post"]="${ROOT_DIR}/post/${ROOT_DIR_SERVICE}/post.exe"
 SERVICES["accommodation"]="${ROOT_DIR}/accommodation/${ROOT_DIR_SERVICE}/accommodation.exe"
 SERVICES["booking"]="${ROOT_DIR}/booking/${ROOT_DIR_SERVICE}/accommodation.exe"
-SERVICES["storage"]="${ROOT_DIR}/storage/${ROOT_DIR_SERVICE}/storage.exe"
+# SERVICES["storage"]="${ROOT_DIR}/storage/${ROOT_DIR_SERVICE}/storage.exe"
 
 LOG_DIR="$HOME/log/my_services"
 mkdir -p "$LOG_DIR"  # Ensure log directory exists

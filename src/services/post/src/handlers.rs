@@ -1,5 +1,5 @@
 use crate::{identify::identify, models::Post, AppState};
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpMessage, HttpRequest, HttpResponse, Responder};
 use futures_util::TryStreamExt;
 use mongodb::bson::{doc, oid::ObjectId, to_document, DateTime};
 use serde::{Deserialize, Serialize};
@@ -97,14 +97,10 @@ pub async fn get_post_by_user(
     req: HttpRequest,
 ) -> impl Responder {
     let collection = state.post_db.clone();
-
-    let author_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let author_id = req.extensions().get::<String>().cloned();
 
     let post = collection
-        .find_one(doc! { "_id": post_id.into_inner().to_string(), "author": author_id })
+        .find_one(doc! { "_id": post_id.into_inner().to_string(), "author_id": author_id })
         .await;
 
     match post {
@@ -120,15 +116,11 @@ pub async fn create_post(
     req: HttpRequest,
 ) -> impl Responder {
     let collection = state.post_db.clone();
-
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let author_id = req.extensions().get::<String>().cloned();
 
     let new_post = Post::new(
         post.content.clone(),
-        user_id,
+        author_id,
         post.post_type.clone(),
         post.title.clone(),
         post.media_urls.clone(),
