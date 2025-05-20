@@ -106,7 +106,7 @@ pub async fn login(
             Ok(token) => HttpResponse::Created().json(json!({
                 "message": "Login successful.",
                 "access_token": token,
-                "user": user
+                "user": User::to_user(user)
             })),
             Err(_) => HttpResponse::InternalServerError().json(json!({
                 "message": "An error occurred while generating the access token."

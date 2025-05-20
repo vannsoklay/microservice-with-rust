@@ -51,7 +51,7 @@ impl Post {
             tags,
             post_type,
             created_at: Some(DateTime::now().try_to_rfc3339_string().unwrap()),
-            updated_at: Some(DateTime::now().try_to_rfc3339_string().unwrap()),
+            updated_at: None,
             deleted_at: None,
         }
     }
