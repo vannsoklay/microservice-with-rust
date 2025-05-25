@@ -4,7 +4,7 @@ use crate::handlers::{
 use actix_web::{web, App, HttpServer};
 use clap::Parser;
 use db::DBConfig;
-use models::{Post, User};
+use models::{AuthorInfo, Post, Vote};
 
 mod db;
 mod handlers;
@@ -22,7 +22,8 @@ struct Cli {
 
 pub struct AppState {
     pub post_db: mongodb::Collection<Post>,
-    pub user_db: mongodb::Collection<User>,
+    pub user_db: mongodb::Collection<AuthorInfo>,
+    pub vote_db: mongodb::Collection<Vote>,
 }
 
 #[actix_web::main]
@@ -34,6 +35,7 @@ async fn main() -> std::io::Result<()> {
 
     let post_db = DBConfig::post_collection().await;
     let user_db = DBConfig::user_collection().await;
+    let vote_db = DBConfig::vote_collection().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
@@ -41,7 +43,11 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on port {}", port);
 
     // Create AppState
-    let app_state = web::Data::new(AppState { post_db, user_db });
+    let app_state = web::Data::new(AppState {
+        post_db,
+        user_db,
+        vote_db,
+    });
 
     let public_paths = vec!["/api/v1/posts/all".to_string()];
 

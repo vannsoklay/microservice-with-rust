@@ -48,7 +48,6 @@ pub struct User {
     pub updated_at: DateTime,
 }
 
-
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct UserResponse {
     #[serde(serialize_with = "serialize_object_id_as_hex_string")]

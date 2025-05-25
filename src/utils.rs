@@ -20,6 +20,7 @@ pub fn detect_service(path: &str) -> Option<&'static str> {
         ("/auth", "auth"),
         ("/user", "user"),
         ("/posts", "post"),
+        ("/votes", "vote"),
         ("/accommodations", "accommodation"),
         ("/orders", "order"),
     ];

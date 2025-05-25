@@ -8,6 +8,7 @@ pub mod load_balancer;
 const AUTH_BACKENDS: [&str; 1] = ["http://localhost:8089"];
 const USER_BACKENDS: [&str; 1] = ["http://localhost:8083"];
 const POST_BACKENDS: [&str; 1] = ["http://localhost:8088"];
+const VOTE_BACKENDS: [&str; 1] = ["http://localhost:8091"];
 const ACCOMMODATION_BACKENDS: [&str; 1] = ["http://localhost:8081"];
 const ORDER_BACKENDS: [&str; 2] = ["http://localhost:8085", "http://localhost:8086"];
 
@@ -16,6 +17,7 @@ pub struct ServiceState {
     pub http_client: Client,
     pub auth_counter: AtomicUsize,
     pub user_counter: AtomicUsize,
+    pub vote_counter: AtomicUsize,
     pub post_counter: AtomicUsize,
     pub accommodation_counter: AtomicUsize,
     pub order_counter: AtomicUsize,
@@ -27,6 +29,7 @@ impl ServiceState {
             http_client: Client::new(),
             auth_counter: AtomicUsize::new(0),
             user_counter: AtomicUsize::new(0),
+            vote_counter: AtomicUsize::new(0),
             post_counter: AtomicUsize::new(0),
             accommodation_counter: AtomicUsize::new(0),
             order_counter: AtomicUsize::new(0),
@@ -47,6 +50,10 @@ impl ServiceState {
             "post" => {
                 let index = self.post_counter.fetch_add(1, Ordering::SeqCst) % POST_BACKENDS.len();
                 Some(POST_BACKENDS[index])
+            }
+            "vote" => {
+                let index = self.vote_counter.fetch_add(1, Ordering::SeqCst) % VOTE_BACKENDS.len();
+                Some(VOTE_BACKENDS[index])
             }
             "accommodation" => {
                 let index = self.accommodation_counter.fetch_add(1, Ordering::SeqCst)
