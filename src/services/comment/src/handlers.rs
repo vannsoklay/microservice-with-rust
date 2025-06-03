@@ -3,8 +3,8 @@ use crate::{
     AppState,
 };
 use actix_web::{web, HttpMessage as _, HttpRequest, HttpResponse, Responder};
-use futures::StreamExt as _;
-use mongodb::bson::{self, doc, Bson, DateTime};
+use futures::TryStreamExt as _;
+use mongodb::bson::{self, doc, Bson};
 
 pub async fn create_comment(
     state: web::Data<AppState>,
@@ -63,6 +63,7 @@ pub async fn get_comments_by_post(
     query: web::Query<Params>,
 ) -> impl Responder {
     let comment_collection = state.comment_db.clone();
+    let user_collection = state.user_db.clone();
     let permalink = permalink.into_inner();
 
     // Pagination defaults
@@ -86,26 +87,48 @@ pub async fn get_comments_by_post(
         ]
     };
 
-    match comment_collection
+    let cursor_result = comment_collection
         .find(filter)
         .sort(doc! { &sort_field: sort_order })
         .skip(skip)
         .limit(limit as i64)
-        .await
-    {
-        Ok(cursor) => {
-            let data: Vec<_> = cursor.filter_map(|doc| async { doc.ok() }).collect().await;
+        .await;
+    match cursor_result {
+        Ok(mut cursor) => {
+            let mut comments = Vec::new();
+            while let Some(comment) = cursor.try_next().await.unwrap_or(None) {
+                comments.push(comment);
+            }
 
-            HttpResponse::Ok().json(serde_json::json!({
+            let mut results = Vec::new();
+
+            for comment in comments {
+                let author = if let Some(author_id) = Some(comment.author_id.to_owned()) {
+                    user_collection
+                        .find_one(doc! { "_id": author_id })
+                        .await
+                        .ok()
+                        .flatten()
+                } else {
+                    None
+                };
+
+                let comment_json =
+                    serde_json::to_value(Comment::to_response(author, comment)).unwrap();
+
+                results.push(comment_json);
+            }
+
+            return HttpResponse::Ok().json(serde_json::json!({
                 "message": "Comments retrieved successfully",
                 "permalink": permalink,
                 "pagination": {
                     "page": page,
                     "limit": limit,
-                    "count": data.len()
+                    "count": results.len()
                 },
-                "comments": data
-            }))
+                "comments": results
+            }));
         }
         Err(err) => {
             eprintln!("Failed to retrieve comments: {:?}", err);

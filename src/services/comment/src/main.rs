@@ -1,4 +1,7 @@
-use crate::handlers::{create_comment, get_comments_by_post};
+use crate::{
+    handlers::{create_comment, get_comments_by_post},
+    models::User,
+};
 use actix_web::{middleware::Logger, web, App, HttpServer};
 use clap::Parser;
 use db::DBConfig;
@@ -18,6 +21,7 @@ struct Cli {
 pub struct AppState {
     pub comment_db: Collection<Comment>,
     pub post_db: Collection<Post>,
+    pub user_db: Collection<User>,
 }
 
 #[actix_web::main]
@@ -29,13 +33,18 @@ async fn main() -> std::io::Result<()> {
 
     let comment_db = DBConfig::comment_collection().await;
     let post_db = DBConfig::post_collection().await;
+    let user_db = DBConfig::user_collection().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);
 
-    let app_state = web::Data::new(AppState { comment_db, post_db });
+    let app_state = web::Data::new(AppState {
+        comment_db,
+        post_db,
+        user_db,
+    });
 
     let public_paths = vec!["/api/v1/comments/".to_string()];
 

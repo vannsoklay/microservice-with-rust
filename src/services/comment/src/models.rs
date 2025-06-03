@@ -1,4 +1,6 @@
-use mongodb::bson::{oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string, DateTime};
+use mongodb::bson::{
+    doc, oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string, DateTime,
+};
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -13,7 +15,7 @@ pub struct Post {
     pub tags: Option<Vec<String>>,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Comment {
     #[serde(rename = "_id", serialize_with = "serialize_object_id_as_hex_string")]
     pub id: ObjectId,
@@ -21,6 +23,18 @@ pub struct Comment {
     pub author_id: String,
     pub content: String,
     pub parent_comment_id: Option<String>,
+    pub created_at: Option<String>,
+    pub updated_at: Option<String>,
+    pub deleted_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct CommentResponse {
+    pub id: String,
+    pub permalink: String,
+    pub parent_comment_id: Option<String>,
+    pub content: String,
+    pub author: Option<User>,
     pub created_at: Option<String>,
     pub updated_at: Option<String>,
     pub deleted_at: Option<String>,
@@ -42,6 +56,26 @@ impl Comment {
             created_at: Some(DateTime::now().try_to_rfc3339_string().unwrap()),
             updated_at: None,
             deleted_at: None,
+        }
+    }
+
+    pub fn to_response(user: Option<User>, comment: Comment) -> CommentResponse {
+        CommentResponse {
+            id: comment.id.to_string(),
+            permalink: comment.permalink.clone(),
+            parent_comment_id: comment.parent_comment_id.clone(),
+            content: comment.content.clone(),
+            created_at: comment.created_at.clone(),
+            updated_at: comment.updated_at.clone(),
+            deleted_at: comment.deleted_at.clone(),
+            author: user.map(|a| User {
+                id: a.id,
+                username: a.username,
+                avatar: a.avatar,
+                is_verified: a.is_verified,
+                follower_count: a.follower_count,
+                following_count: a.following_count,
+            }),
         }
     }
 }
