@@ -1,6 +1,6 @@
-use crate::handlers::{
+use crate::{handlers::{
     create_post, delete_post, get_all_posts, get_all_posts_by_user, get_post_by_user, update_post,
-};
+}, models::Comment};
 use actix_web::{web, App, HttpServer};
 use clap::Parser;
 use db::DBConfig;
@@ -24,6 +24,7 @@ pub struct AppState {
     pub post_db: mongodb::Collection<Post>,
     pub user_db: mongodb::Collection<AuthorInfo>,
     pub vote_db: mongodb::Collection<Vote>,
+    pub comment_db: mongodb::Collection<Comment>
 }
 
 #[actix_web::main]
@@ -36,6 +37,7 @@ async fn main() -> std::io::Result<()> {
     let post_db = DBConfig::post_collection().await;
     let user_db = DBConfig::user_collection().await;
     let vote_db = DBConfig::vote_collection().await;
+    let comment_db = DBConfig::comment_collection().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
@@ -47,6 +49,7 @@ async fn main() -> std::io::Result<()> {
         post_db,
         user_db,
         vote_db,
+        comment_db
     });
 
     let public_paths = vec!["/api/v1/posts/all".to_string()];

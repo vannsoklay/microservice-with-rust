@@ -168,3 +168,8 @@ impl PostWithAuthor {
 pub struct Vote {
     pub permalink: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Comment {
+    pub permalink: String,
+}

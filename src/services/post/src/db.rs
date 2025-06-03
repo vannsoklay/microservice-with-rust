@@ -2,7 +2,7 @@ use mongodb::{options::ClientOptions, Client, Collection, Database};
 
 pub struct DBConfig {}
 
-use crate::models::{Post, AuthorInfo, Vote};
+use crate::models::{Post, AuthorInfo, Vote, Comment};
 
 async fn db() -> Database {
     let client_options = ClientOptions::parse("mongodb://localhost:27017")
@@ -33,5 +33,9 @@ impl DBConfig {
 
     pub async fn vote_collection() -> Collection<Vote> {
         db().await.collection::<Vote>("votes")
+    }
+
+    pub async fn comment_collection() -> Collection<Comment> {
+        db().await.collection::<Comment>("comments")
     }
 }
