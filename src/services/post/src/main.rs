@@ -1,6 +1,10 @@
-use crate::{handlers::{
-    create_post, delete_post, get_all_posts, get_all_posts_by_user, get_post_by_user, update_post,
-}, models::Comment};
+use crate::{
+    handlers::{
+        create_post, delete_post, get_all_posts, get_all_posts_by_user, get_post_by_permalink,
+        get_post_by_user, update_post,
+    },
+    models::Comment,
+};
 use actix_web::{web, App, HttpServer};
 use clap::Parser;
 use db::DBConfig;
@@ -24,7 +28,7 @@ pub struct AppState {
     pub post_db: mongodb::Collection<Post>,
     pub user_db: mongodb::Collection<AuthorInfo>,
     pub vote_db: mongodb::Collection<Vote>,
-    pub comment_db: mongodb::Collection<Comment>
+    pub comment_db: mongodb::Collection<Comment>,
 }
 
 #[actix_web::main]
@@ -49,10 +53,13 @@ async fn main() -> std::io::Result<()> {
         post_db,
         user_db,
         vote_db,
-        comment_db
+        comment_db,
     });
 
-    let public_paths = vec!["/api/v1/posts/all".to_string()];
+    let public_paths = vec![
+        "/api/v1/posts/all".to_string(),
+        "/api/v1/posts/post-by-permalink".to_string(),
+    ];
 
     HttpServer::new(move || {
         App::new()
@@ -64,6 +71,10 @@ async fn main() -> std::io::Result<()> {
                     .route("", web::get().to(get_all_posts_by_user))
                     .route("", web::post().to(create_post))
                     .route("/{id}", web::get().to(get_post_by_user))
+                    .route(
+                        "/post-by-permalink/{permalink}",
+                        web::get().to(get_post_by_permalink),
+                    )
                     .route("/{id}", web::put().to(update_post))
                     .route("/{id}", web::delete().to(delete_post)),
             )

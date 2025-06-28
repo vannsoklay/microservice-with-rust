@@ -4,7 +4,7 @@ use crate::{
 };
 use actix_web::{web, HttpMessage as _, HttpRequest, HttpResponse, Responder};
 use futures::TryStreamExt as _;
-use mongodb::bson::{self, doc, Bson};
+use mongodb::bson::{self, doc, Bson, DateTime};
 
 pub async fn create_comment(
     state: web::Data<AppState>,
@@ -134,6 +134,93 @@ pub async fn get_comments_by_post(
             eprintln!("Failed to retrieve comments: {:?}", err);
             HttpResponse::InternalServerError().json(serde_json::json!({
                 "error": "Failed to retrieve comments",
+                "details": err.to_string()
+            }))
+        }
+    }
+}
+
+pub async fn update_comment(
+    state: web::Data<AppState>,
+    comment_id: web::Path<String>,
+    body: web::Json<CommentReq>,
+    req: HttpRequest,
+) -> impl Responder {
+    let comment_collection = state.comment_db.clone();
+    let comment_id = comment_id.into_inner();
+    let update_data = body.into_inner();
+
+    let author_id = match req.extensions().get::<String>().cloned() {
+        Some(id) => id,
+        None => {
+            return HttpResponse::Unauthorized().json(serde_json::json!({
+                "error": "Unauthorized: missing user ID"
+            }));
+        }
+    };
+
+    let filter = doc! { "_id": comment_id.to_owned(), "author_id": &author_id };
+
+    match comment_collection
+        .find_one_and_update(
+            filter,
+            doc! { "$set": { "content": update_data.content, "updated_at": DateTime::now().try_to_rfc3339_string().unwrap() } },
+        )
+        .await
+    {
+        Ok(Some(updated_comment)) => HttpResponse::Ok().json(serde_json::json!({
+            "message": "Comment updated successfully",
+            "data": updated_comment
+        })),
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "Comment not found or you do not have permission to update it"
+        })),
+        Err(err) => {
+            eprintln!("Failed to update comment: {:?}", err);
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Failed to update comment",
+                "details": err.to_string()
+            }))
+        }
+    }
+}
+
+pub async fn delete_comment(
+    state: web::Data<AppState>,
+    comment_id: web::Path<String>,
+    req: HttpRequest,
+) -> impl Responder {
+    let comment_collection = state.comment_db.clone();
+    let comment_id = comment_id.into_inner();
+
+    let author_id = match req.extensions().get::<String>().cloned() {
+        Some(id) => id,
+        None => {
+            return HttpResponse::Unauthorized().json(serde_json::json!({
+                "error": "Unauthorized: missing user ID"
+            }));
+        }
+    };
+
+    let filter = doc! { "_id": comment_id.to_owned(), "author_id": &author_id };
+
+    match comment_collection
+        .find_one_and_update(
+            filter,
+            doc! { "$set": { "deleted_at": DateTime::now().try_to_rfc3339_string().unwrap() } },
+        )
+        .await
+    {
+        Ok(Some(_)) => HttpResponse::Ok().json(serde_json::json!({
+            "message": "Comment deleted successfully"
+        })),
+        Ok(None) => HttpResponse::NotFound().json(serde_json::json!({
+            "error": "Comment not found or you do not have permission to delete it"
+        })),
+        Err(err) => {
+            eprintln!("Failed to delete comment: {:?}", err);
+            HttpResponse::InternalServerError().json(serde_json::json!({
+                "error": "Failed to delete comment",
                 "details": err.to_string()
             }))
         }

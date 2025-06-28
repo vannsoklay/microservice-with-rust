@@ -275,15 +275,138 @@ pub async fn get_post_by_user(
     post_id: web::Path<String>,
     req: HttpRequest,
 ) -> impl Responder {
-    let collection = state.post_db.clone();
+    let post_collection = state.post_db.clone();
+    let vote_collection = state.vote_db.clone();
+    let user_collection = state.user_db.clone();
     let author_id = req.extensions().get::<String>().cloned();
 
-    let post = collection
+    let post = post_collection
         .find_one(doc! { "_id": post_id.into_inner().to_string(), "author_id": author_id })
         .await;
 
     match post {
-        Ok(Some(post)) => HttpResponse::Ok().json(post),
+        Ok(Some(post)) => {
+            let permalink = post.permalink.clone().unwrap_or_default();
+
+            let vote_filter = doc! {
+                "permalink": &permalink,
+                "$or": [
+                    { "deleted_at": { "$exists": false } },
+                    { "deleted_at": Bson::Null }
+                ]
+            };
+
+            let total_votes = vote_collection
+                .count_documents(vote_filter)
+                .await
+                .unwrap_or(0);
+
+            let author = if let Some(author_id) = &post.author_id {
+                user_collection
+                    .find_one(doc! { "_id": author_id })
+                    .await
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
+            let mut post_json =
+                serde_json::to_value(PostWithAuthor { post, author }.to_response()).unwrap();
+
+            post_json["total_votes"] = json!(total_votes);
+            HttpResponse::Ok().json(post_json)
+        }
+        Ok(None) => HttpResponse::NotFound().json(json!({"message": "Post not found"})),
+        Err(err) => HttpResponse::InternalServerError().json(json!({"message": err.to_string()})),
+    }
+}
+
+pub async fn get_post_by_permalink(
+    state: web::Data<AppState>,
+    permalink: web::Path<String>,
+    query: web::Query<ParamQuery>,
+) -> impl Responder {
+    let post_collection = state.post_db.clone();
+    let vote_collection = state.vote_db.clone();
+    let user_collection = state.user_db.clone();
+
+    let params = query.into_inner();
+
+    // Optional: Get user ID for the given username (to check vote status)
+    let user_id_opt = if let Some(username) = &params.username {
+        user_collection
+            .find_one(doc! { "username": username })
+            .await
+            .ok()
+            .flatten()
+            .and_then(|user| Some(user.id))
+    } else {
+        None
+    };
+
+    let post = post_collection
+        .find_one(doc! { "permalink": permalink.into_inner().to_string()})
+        .await;
+
+    match post {
+        Ok(Some(post)) => {
+            let permalink = post.permalink.clone().unwrap_or_default();
+
+            let vote_filter = doc! {
+                "permalink": &permalink,
+                "$or": [
+                    { "deleted_at": { "$exists": false } },
+                    { "deleted_at": Bson::Null }
+                ]
+            };
+            
+            let voted_permalinks: HashSet<String> = if let Some(ref user_id) = user_id_opt {
+                let vote_filter = doc! {
+                    "author_id": user_id,
+                    "permalink": { "$in": &vec![permalink.clone()] },
+                    "$or": [
+                        { "deleted_at": { "$exists": false } },
+                        { "deleted_at": Bson::Null }
+                    ]
+                };
+
+                match vote_collection.find(vote_filter).await {
+                    Ok(cursor) => {
+                        cursor
+                            .filter_map(|res| async { res.ok().map(|v| v.permalink.clone()) })
+                            .collect()
+                            .await
+                    }
+                    Err(_) => HashSet::new(),
+                }
+            } else {
+                HashSet::new()
+            };
+
+
+            let total_votes = vote_collection
+                .count_documents(vote_filter)
+                .await
+                .unwrap_or(0);
+
+            let author = if let Some(author_id) = &post.author_id {
+                user_collection
+                    .find_one(doc! { "_id": author_id })
+                    .await
+                    .ok()
+                    .flatten()
+            } else {
+                None
+            };
+
+            let mut post_json =
+                serde_json::to_value(PostWithAuthor { post, author }.to_response()).unwrap();
+
+            post_json["total_votes"] = json!(total_votes);
+            post_json["voted_by_user"] = json!(voted_permalinks.contains(&permalink.clone()));
+            HttpResponse::Ok().json(post_json)
+        }
         Ok(None) => HttpResponse::NotFound().json(json!({"message": "Post not found"})),
         Err(err) => HttpResponse::InternalServerError().json(json!({"message": err.to_string()})),
     }

@@ -1,5 +1,5 @@
 use crate::{
-    handlers::{create_comment, get_comments_by_post},
+    handlers::{create_comment, get_comments_by_post, update_comment, delete_comment},
     models::User,
 };
 use actix_web::{middleware::Logger, web, App, HttpServer};
@@ -46,7 +46,7 @@ async fn main() -> std::io::Result<()> {
         user_db,
     });
 
-    let public_paths = vec!["/api/v1/comments/".to_string()];
+    let public_paths = vec!["/api/v1/comments/get-post-comments".to_string()];
 
     HttpServer::new(move || {
         App::new()
@@ -56,7 +56,12 @@ async fn main() -> std::io::Result<()> {
             .service(
                 web::scope("/api/v1/comments")
                     .route("", web::post().to(create_comment))
-                    .route("/{permalink}", web::get().to(get_comments_by_post)),
+                    .route(
+                        "/get-post-comments/{permalink}",
+                        web::get().to(get_comments_by_post),
+                    )
+                    .route("/{comment_id}", web::put().to(update_comment))
+                    .route("/{comment_id}", web::delete().to(delete_comment)),
             )
     })
     .bind(&bind_address)?

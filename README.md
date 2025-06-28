@@ -30,7 +30,7 @@ A concise and efficient microservice built with Rust, designed to [insert a brie
 Ensure you have the following installed before setting up:
 - [Rust and Cargo](https://www.rust-lang.org/tools/install) (v1.x or newer)
 - [Docker](https://www.docker.com/) (optional, for containerization)
-- `PostgreSQL` or any other database if required.
+- `MONGODB` or any other database if required.
 
 ---
 
