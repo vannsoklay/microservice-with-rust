@@ -24,12 +24,8 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let args = Cli::parse();
-
-    // Initialize MongoDB client
-    let client = Client::with_uri_str("mongodb://localhost:27017")
-        .await
-        .unwrap();
-    let db = client.database("microservice-db");
+    
+    let db = db::db().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
