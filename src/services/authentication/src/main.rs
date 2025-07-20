@@ -12,7 +12,7 @@ mod jwt;
 
 #[derive(Parser)]
 struct Cli {
-    #[clap(short, long, default_value = "8011")]
+    #[clap(short, long, default_value = "8089")]
     port: String,
 }
 
