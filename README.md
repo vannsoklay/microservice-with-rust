@@ -18,90 +18,151 @@ A concise and efficient microservice built with Rust, designed to [insert a brie
 ---
 
 ## Features
-- Lightweight HTTP REST API
-- Optimized database queries
-- Secure JWT authentication
-- Configurable with `.env` file
+
+- Lightweight, high-performance HTTP REST API
+- Optimized database queries for speed and efficiency
+- Secure JWT-based authentication
+- Easy configuration via `.env` file
+- Health check endpoint for liveness monitoring
+- Docker-ready for seamless deployment
 
 ---
 
 ## Prerequisites
 
-Ensure you have the following installed before setting up:
+Before you begin, ensure you have the following installed:
+
 - [Rust and Cargo](https://www.rust-lang.org/tools/install) (v1.x or newer)
 - [Docker](https://www.docker.com/) (optional, for containerization)
-- `MONGODB` or any other database if required.
+- [MongoDB](https://www.mongodb.com/) or any other supported database (if required)
 
 ---
 
 ## Setup and Installation
 
 ### 1. Clone the Repository
+
 ```bash
 git clone git@github.com:vannsoklay/microservice-with-rust.git
 cd microservice-with-rust
+```
 
-2. Build the Project
-Run the following command to build the Rust microservice:
+### 2. Build the Project
 
-bash
-Copy code
+Compile the Rust microservice:
+
+```bash
 cargo build --release
-3. Run Migrations (if using a database)
-Ensure the database is up and configured in the .env file, then run migrations:
+```
 
-bash
-Copy code
+### 3. Configure Your Database
+
+If using a database, ensure it is running and configured in your `.env` file.
+
+### 4. Run Migrations (if applicable)
+
+If your project uses Diesel for migrations:
+
+```bash
 diesel migration run
-4. Start the Server
-Start the microservice:
+```
 
-bash
-Copy code
-cargo run
-Configuration
-All configurations are stored in the .env file. Create one by copying the example:
+### 5. Start the Server
 
-bash
-Copy code
-cp .env.example .env
-Example .env file:
+Launch the microservice:
 
-dotenv
-Copy code
-MONG_DB="localhost:27017"
-Usage
-Starting the Microservice
-Run the following to start the server:
-
-bash
-Copy code
+```bash
 cargo run --release
-Interacting with the API
-Use tools like Postman or curl to test the endpoints. For example:
+```
 
-bash
-Copy code
+---
+
+## Configuration
+
+All configurations are managed via the `.env` file. Create one by copying the example:
+
+```bash
+cp .env.example .env
+```
+
+Example `.env`:
+
+```dotenv
+MONG_DB="localhost:27017"
+JWT_SECRET="your_jwt_secret"
+PORT=8443
+```
+
+---
+
+## Usage
+
+### Starting the Microservice
+
+```bash
+cargo run --release
+```
+
+### Interacting with the API
+
+You can use tools like [Postman](https://www.postman.com/) or `curl` to test the endpoints. Example:
+
+```bash
 curl -X GET http://localhost:8443/health
-API Documentation
-HTTP Method	Endpoint	Description
-GET	/health	Health check for the service
-POST	/api/resource	Create a resource
-GET	/api/resource/:id	Retrieve a specific resource
-Testing
-Run the tests using the following command:
+```
 
-bash
-Copy code
+---
+
+## API Documentation
+
+| HTTP Method | Endpoint             | Description                  |
+|-------------|----------------------|------------------------------|
+| GET         | /health              | Health check for the service |
+| POST        | /api/resource        | Create a resource            |
+| GET         | /api/resource/:id    | Retrieve a specific resource |
+
+_Expand this section with more endpoints as needed._
+
+---
+
+## Testing
+
+Run the unit and integration tests using:
+
+```bash
 cargo test
-Building a Docker Image (Optional)
-Build the Docker image:
+```
 
-bash
-Copy code
+---
+
+## Building a Docker Image (Optional)
+
+To containerize your service:
+
+```bash
 docker build -t microservice-with-rust .
+```
+
 Run the container:
 
-bash
-Copy code
+```bash
 docker run -p 8080:8080 microservice-with-rust
+```
+
+---
+
+## License
+
+This project is licensed under the [MIT License](LICENSE).
+
+---
+
+## Contributing
+
+Contributions are welcome! Please open issues or submit pull requests for improvements.
+
+---
+
+## Support
+
+For questions or support, please open an [issue](https://github.com/vannsoklay/microservice-with-rust/issues).

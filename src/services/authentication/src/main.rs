@@ -12,7 +12,7 @@ mod jwt;
 
 #[derive(Parser)]
 struct Cli {
-    #[clap(short, long, default_value = "8089")]
+    #[clap(short, long, default_value = "8011")]
     port: String,
 }
 
@@ -22,11 +22,17 @@ pub struct AppState {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
+    dotenv::dotenv().ok();
+    env_logger::init();
+
+
     let args = Cli::parse();
 
     // Initialize MongoDB client
-    let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
-    let db = client.database("microservice-db");
+    // let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
+    // let db = client.database("microservice-db");
+
+    let db = db::db().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
