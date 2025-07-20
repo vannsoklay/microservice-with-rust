@@ -21,3 +21,5 @@ clap = { version = "*", features = ["derive"] }
 image = "*"
 mime_guess = "*"
 uuid = { version = "*", features = ["v4"] }
+dotenv = "*"
+env_logger = "*"

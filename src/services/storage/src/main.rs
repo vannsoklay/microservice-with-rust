@@ -7,8 +7,7 @@ mod storage;
 mod stream;
 mod utils;
 
-use crate::handlers::{delete_file, upload_file};
-
+use std::env;
 use actix_cors::Cors;
 use actix_web::middleware::Logger;
 use actix_web::{http, web, App, HttpServer};
@@ -20,11 +19,7 @@ use storage::LocalStorageService;
 use storage::S3StorageService;
 use stream::stream_image;
 
-#[derive(Parser)]
-struct Cli {
-    #[clap(short, long, default_value = "9000")]
-    port: String,
-}
+use crate::handlers::{delete_file, upload_file};
 
 pub struct AppState {
     pub db_config: DBConfig<MongoStorageRepository<FileMetadata>>,
@@ -34,8 +29,11 @@ pub struct AppState {
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {
-    let args = Cli::parse();
-    let port = args.port;
+    dotenv::dotenv().ok();
+    env_logger::init();
+
+    let port = env::var("PORT").unwrap_or_else(|_| "9000".into());
+    let local_path = env::var("LOCAL_PATH").unwrap_or_else(|_| "./uploads".into());
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);
@@ -46,7 +44,7 @@ async fn main() -> std::io::Result<()> {
     let s3_client = db::get_s3_client().await;
 
     // Initialize StorageService
-    let local_storage_service = LocalStorageService::new("./uploads".to_string()); // Directory for uploads
+    let local_storage_service = LocalStorageService::new(local_path); // Directory for uploads
     let s3_storage_service = S3StorageService::new("your-s3-bucket-name".to_string(), s3_client);
 
     // Create AppState
