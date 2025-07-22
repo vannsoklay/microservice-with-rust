@@ -11,7 +11,7 @@ use actix_web::{http, middleware::Logger, web, App, HttpResponse, HttpServer};
 use dotenv::dotenv;
 use health::health_check;
 use middleware::jwt::JwtMiddleware;
-use routing::{ServiceState, gateway::forward_request};
+use routing::{gateway::forward_request, ServiceState};
 
 #[actix_web::main]
 async fn main() -> std::io::Result<()> {

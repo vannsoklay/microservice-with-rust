@@ -15,7 +15,7 @@ mod middleware;
 mod models;
 #[derive(Parser)]
 struct Cli {
-    #[clap(short, long, default_value = "8091")]
+    #[clap(short, long, default_value = "9011")]
     port: String,
 }
 
@@ -53,16 +53,13 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::AuthMiddleware::new(public_paths.clone()))
             .service(
                 web::scope("/api/v1/follow")
-                    .route("/toggle", web::get().to(follow_toggle))
+                    .route("/", web::post().to(follow))
+                    .route("/unfollow", web::post().to(unfollow))
+                    .route("/toggle", web::post().to(follow_toggle))
                     .route("/status", web::get().to(follow_status))
                     .route("/followers/{user_id}", web::get().to(followers))
                     .route("/following/{user_id}", web::get().to(following))
                     .route("/counts/{user_id}", web::get().to(count_follow)),
-            )
-            .service(
-                web::scope("/api/v1")
-                    .route("/", web::post().to(follow))
-                    .route("/", web::post().to(unfollow)),
             )
     })
     .bind(&bind_address)?

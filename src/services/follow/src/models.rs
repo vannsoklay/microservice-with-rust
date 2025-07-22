@@ -10,5 +10,23 @@ pub struct Follow {
     pub following_id: String, // the one being followed
 
     pub created_at: Option<String>,
-    pub updated_at: Option<String>,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct FollowRequest {
+    pub following_id: String,
+}
+
+#[derive(Debug, Deserialize)]
+pub struct Query {
+    pub page: Option<u64>,
+    pub limit: Option<u64>,
+    pub sort_by: Option<String>, // e.g. "created_at"
+    pub sort_order: Option<i32>, // 1 = ascending, -1 = descending
+}
+
+#[derive(Debug, Deserialize)]
+pub struct StatusQuery {
+    pub follower_id: String,
+    pub following_id: String,
 }

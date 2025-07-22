@@ -15,6 +15,7 @@ SERVICES["authentication"]="${ROOT_DIR}/authentication/${ROOT_DIR_SERVICE_BUILD}
 SERVICES["post"]="${ROOT_DIR}/post/${ROOT_DIR_SERVICE_BUILD}/post"
 SERVICES["comment"]="${ROOT_DIR}/comment/${ROOT_DIR_SERVICE_BUILD}/comment"
 SERVICES["vote"]="${ROOT_DIR}/vote/${ROOT_DIR_SERVICE_BUILD}/vote"
+SERVICES["follow"]="${ROOT_DIR}/follow/${ROOT_DIR_SERVICE_BUILD}/follow"
 SERVICES["accommodation"]="${ROOT_DIR}/accommodation/${ROOT_DIR_SERVICE_BUILD}/accommodation"
 SERVICES["booking"]="${ROOT_DIR}/booking/${ROOT_DIR_SERVICE_BUILD}/booking"
 # SERVICES["storage"]="${ROOT_DIR}/storage/${ROOT_DIR_SERVICE_BUILD}/storage"

@@ -9,6 +9,7 @@ pub struct ServiceState {
     pub http_client: Client,
     pub auth_counter: AtomicUsize,
     pub user_counter: AtomicUsize,
+    pub follow_counter: AtomicUsize,
     pub comment_counter: AtomicUsize,
     pub vote_counter: AtomicUsize,
     pub post_counter: AtomicUsize,
@@ -22,6 +23,7 @@ impl ServiceState {
             http_client: Client::new(),
             auth_counter: AtomicUsize::new(0),
             user_counter: AtomicUsize::new(0),
+            follow_counter: AtomicUsize::new(0),
             comment_counter: AtomicUsize::new(0),
             vote_counter: AtomicUsize::new(0),
             post_counter: AtomicUsize::new(0),
@@ -42,6 +44,11 @@ impl ServiceState {
                 let index = self.user_counter.fetch_add(1, Ordering::SeqCst)
                     % load_balancer::USER_BACKENDS.len();
                 Some(load_balancer::USER_BACKENDS[index])
+            }
+            "follow" => {
+                let index = self.follow_counter.fetch_add(1, Ordering::SeqCst)
+                    % load_balancer::FOLLOW_BACKENDS.len();
+                Some(load_balancer::FOLLOW_BACKENDS[index])
             }
             "post" => {
                 let index = self.post_counter.fetch_add(1, Ordering::SeqCst)
