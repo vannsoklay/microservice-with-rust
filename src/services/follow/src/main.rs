@@ -1,8 +1,8 @@
 use crate::{
     handlers::{
-        count_follow, follow, follow_status, follow_toggle, followers, following, unfollow,
+        follow, follow_count, follow_status, follow_toggle, followers, following, unfollow,
     },
-    models::Follow,
+    models::{Follow, User},
 };
 use actix_web::{App, HttpServer, middleware::Logger, web};
 use clap::Parser;
@@ -21,6 +21,7 @@ struct Cli {
 
 pub struct AppState {
     pub follow_db: Collection<Follow>,
+    pub user_db: Collection<User>,
 }
 
 #[actix_web::main]
@@ -31,13 +32,14 @@ async fn main() -> std::io::Result<()> {
     let args = Cli::parse();
 
     let follow_db = DBConfig::follow_collection().await;
+    let user_db = DBConfig::user_collection().await;
 
     let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);
 
-    let app_state = web::Data::new(AppState { follow_db });
+    let app_state = web::Data::new(AppState { follow_db, user_db });
 
     let public_paths = vec![
         "/api/v1/follow/followers".to_string(),
@@ -59,7 +61,7 @@ async fn main() -> std::io::Result<()> {
                     .route("/status", web::get().to(follow_status))
                     .route("/followers/{user_id}", web::get().to(followers))
                     .route("/following/{user_id}", web::get().to(following))
-                    .route("/counts/{user_id}", web::get().to(count_follow)),
+                    .route("/counts/{user_id}", web::get().to(follow_count)),
             )
     })
     .bind(&bind_address)?

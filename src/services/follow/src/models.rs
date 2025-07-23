@@ -1,5 +1,14 @@
+use actix_web::Result;
 use mongodb::bson::{oid::ObjectId, serde_helpers::serialize_object_id_as_hex_string};
 use serde::{Deserialize, Serialize};
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct User {
+    username: Option<String>,
+    email: Option<String>,
+    avatar: Option<String>,
+    bio: Option<String>,
+}
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Follow {
@@ -10,6 +19,47 @@ pub struct Follow {
     pub following_id: String, // the one being followed
 
     pub created_at: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MapFollow {
+    pub follower: User,
+    pub following: User,
+}
+
+impl Follow {
+    pub fn get_follower(
+        username: Option<String>,
+        email: Option<String>,
+        avatar: Option<String>,
+        bio: Option<String>,
+    ) -> User {
+        User {
+            username,
+            email,
+            avatar,
+            bio,
+        }
+    }
+    pub fn get_following(
+        username: Option<String>,
+        email: Option<String>,
+        avatar: Option<String>,
+        bio: Option<String>,
+    ) -> User {
+        User {
+            username,
+            email,
+            avatar,
+            bio,
+        }
+    }
+    pub fn mapper_follow(follower: User, following: User) -> Result<MapFollow> {
+        Ok(MapFollow {
+            follower,
+            following,
+        })
+    }
 }
 
 #[derive(Debug, Deserialize)]

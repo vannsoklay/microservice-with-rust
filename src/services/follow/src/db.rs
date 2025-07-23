@@ -3,7 +3,7 @@ use std::env;
 
 pub struct DBConfig {}
 
-use crate::models::Follow;
+use crate::models::{Follow, User};
 
 async fn db() -> Database {
     dotenv::dotenv().ok();
@@ -27,5 +27,9 @@ async fn db() -> Database {
 impl DBConfig {
     pub async fn follow_collection() -> Collection<Follow> {
         db().await.collection::<Follow>("user_follows")
+    }
+
+    pub async fn user_collection() -> Collection<User> {
+        db().await.collection::<User>("users")
     }
 }

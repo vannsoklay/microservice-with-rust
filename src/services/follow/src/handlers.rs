@@ -5,7 +5,7 @@ use serde_json::json;
 
 use crate::{
     AppState,
-    models::{Follow, FollowRequest, Query, StatusQuery},
+    models::{Follow, FollowRequest, Query, StatusQuery, User},
 };
 
 pub async fn follow(
@@ -177,8 +177,11 @@ pub async fn followers(
     user_id: web::Path<String>,
     query: web::Query<Query>,
 ) -> impl Responder {
+    use mongodb::bson::{doc, oid::ObjectId};
+
     let follow_db = state.follow_db.clone();
-    let user_id: String = user_id.into_inner();
+    let user_db = state.user_db.clone();
+    let user_id = user_id.into_inner();
 
     // Pagination defaults
     let page = query.page.unwrap_or(1).max(1);
@@ -190,36 +193,53 @@ pub async fn followers(
         .sort_by
         .clone()
         .unwrap_or_else(|| "created_at".to_string());
+    let sort_order = query.sort_order.unwrap_or(-1);
 
-    let sort_order = query.sort_order.unwrap_or(-1); // default to newest first
-
-    let data = follow_db
-        .find(doc! { "following_id": user_id })
-        .limit(limit as i64)
-        .skip(skip)
-        .sort(doc! { &sort_field: sort_order })
-        .await;
-
-    match data {
-        Ok(cursor) => {
-            let data: Vec<_> = cursor.filter_map(|doc| async { doc.ok() }).collect().await;
-
-            HttpResponse::Ok().json(serde_json::json!({
-                "message": "Follower retrieved successfully",
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "count": data.len()
-                },
-                "data": data
-            }))
-        }
+    // Step 1: Find all follows where following_id = user_id
+    let mut follows_cursor = match follow_db.find(doc! { "following_id": &user_id }).await {
+        Ok(cursor) => cursor,
         Err(_) => {
             return HttpResponse::BadGateway().json(json!({
-                "messsage": "Internat server error"
+                "message": "Internal server error"
             }));
         }
+    };
+
+    // Step 2: Collect all follower_id values
+    let mut follower_ids = Vec::new();
+    while let Some(result) = follows_cursor.next().await {
+        if let Ok(follow) = result {
+            if let Ok(follower_oid) = ObjectId::parse_str(&follow.follower_id) {
+                follower_ids.push(follower_oid.to_hex());
+            }
+        }
     }
+
+    // Step 3: Query user collection for all follower_ids
+    let filter = doc! { "_id": { "$in": &follower_ids } };
+    let users_cursor = match user_db.find(filter).await {
+        Ok(cursor) => cursor,
+        Err(_) => {
+            return HttpResponse::BadGateway().json(json!({
+                "message": "Internal server error"
+            }));
+        }
+    };
+
+    let users: Vec<User> = users_cursor
+        .filter_map(|doc| async { doc.ok() })
+        .collect()
+        .await;
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "message": "Followers retrieved successfully",
+        "pagination": {
+            "page": page,
+            "limit": limit,
+            "count": users.len()
+        },
+        "data": users
+    }))
 }
 
 pub async fn following(
