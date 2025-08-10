@@ -4,6 +4,11 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct User {
+    #[serde(serialize_with = "serialize_object_id_as_hex_string")]
+    #[serde(rename(serialize = "id"))]
+    #[serde(rename(deserialize = "_id"))]
+    id: ObjectId,
+
     username: Option<String>,
     email: Option<String>,
     avatar: Option<String>,
@@ -29,12 +34,14 @@ pub struct MapFollow {
 
 impl Follow {
     pub fn get_follower(
+        id: ObjectId,
         username: Option<String>,
         email: Option<String>,
         avatar: Option<String>,
         bio: Option<String>,
     ) -> User {
         User {
+            id,
             username,
             email,
             avatar,
@@ -42,12 +49,14 @@ impl Follow {
         }
     }
     pub fn get_following(
+        id: ObjectId,
         username: Option<String>,
         email: Option<String>,
         avatar: Option<String>,
         bio: Option<String>,
     ) -> User {
         User {
+            id,
             username,
             email,
             avatar,

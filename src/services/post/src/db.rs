@@ -3,7 +3,7 @@ use std::env;
 
 pub struct DBConfig {}
 
-use crate::models::{Post, AuthorInfo, Vote, Comment};
+use crate::models::{AuthorInfo, Comment, Follow, Post, Vote};
 
 async fn db() -> Database {
     dotenv::dotenv().ok();
@@ -14,15 +14,10 @@ async fn db() -> Database {
     let password = env::var("DB_PASSWORD").unwrap();
     let db_name = env::var("DB_NAME").unwrap_or_else(|_| "admin".into());
 
-    let mongo_uri = format!(
-        "mongodb://{}:{}@{}:{}",
-        username, password, host, port
-    );
+    let mongo_uri = format!("mongodb://{}:{}@{}:{}", username, password, host, port);
 
     println!("url {:?}", mongo_uri);
-    let client_options = ClientOptions::parse(&mongo_uri)
-        .await
-        .unwrap();
+    let client_options = ClientOptions::parse(&mongo_uri).await.unwrap();
 
     // let client_options = ClientOptions::parse("mongodb://localhost:27017")
     //     .await
@@ -37,7 +32,7 @@ async fn db() -> Database {
         .await
         .unwrap();
 
-    let database = client.database("microservice-db");
+    let database = client.database(&db_name);
     database
 }
 
@@ -56,5 +51,9 @@ impl DBConfig {
 
     pub async fn comment_collection() -> Collection<Comment> {
         db().await.collection::<Comment>("comments")
+    }
+
+    pub async fn follow_collection() -> Collection<Follow> {
+        db().await.collection::<Follow>("user_follows")
     }
 }

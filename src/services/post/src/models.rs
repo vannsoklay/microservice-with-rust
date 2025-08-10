@@ -173,3 +173,9 @@ pub struct Vote {
 pub struct Comment {
     pub permalink: String,
 }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct Follow {
+    pub following_id: String,
+    pub follower_id: String,
+}

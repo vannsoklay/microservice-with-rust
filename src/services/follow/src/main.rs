@@ -4,7 +4,7 @@ use crate::{
     },
     models::{Follow, User},
 };
-use actix_web::{App, HttpServer, middleware::Logger, web};
+use actix_web::{middleware::Logger, web, App, HttpServer};
 use clap::Parser;
 use db::DBConfig;
 use mongodb::Collection;
@@ -55,7 +55,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(middleware::AuthMiddleware::new(public_paths.clone()))
             .service(
                 web::scope("/api/v1/follow")
-                    .route("/", web::post().to(follow))
+                    .route("", web::post().to(follow))
                     .route("/unfollow", web::post().to(unfollow))
                     .route("/toggle", web::post().to(follow_toggle))
                     .route("/status", web::get().to(follow_status))

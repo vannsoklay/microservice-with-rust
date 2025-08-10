@@ -22,28 +22,21 @@ pub struct ParamQuery {
 pub async fn get_all_posts(
     state: web::Data<AppState>,
     query: web::Query<ParamQuery>,
+    req: HttpRequest,
 ) -> impl Responder {
     let post_collection = state.post_db.clone();
     let user_collection = state.user_db.clone();
     let vote_collection = state.vote_db.clone();
     let comment_collection = state.comment_db.clone();
+    let follow_collection = state.follow_db.clone();
 
     let params = query.into_inner();
     let page = params.skip.unwrap_or(1).max(1);
     let limit = params.limit.unwrap_or(10);
     let skip = (page - 1) * limit;
 
-    // Optional: Get user ID for the given username (to check vote status)
-    let user_id_opt = if let Some(username) = &params.username {
-        user_collection
-            .find_one(doc! { "username": username })
-            .await
-            .ok()
-            .flatten()
-            .and_then(|user| Some(user.id))
-    } else {
-        None
-    };
+    // Optional: Get user ID for the given username
+    let user_id_opt = identify(req).await;
 
     // Fetch posts
     let cursor_result = post_collection
@@ -57,13 +50,17 @@ pub async fn get_all_posts(
         Ok(mut cursor) => {
             let mut posts = Vec::new();
             let mut permalinks = Vec::new();
+            let mut author_ids = Vec::new();
 
             while let Some(post) = cursor.try_next().await.unwrap_or(None) {
+                if let Some(author_id) = &post.author_id {
+                    author_ids.push(author_id.clone());
+                }
                 permalinks.push(post.permalink.clone().unwrap_or_default());
                 posts.push(post);
             }
 
-            // Fetch all votes made by the user across these posts (soft-deleted votes excluded)
+            // --- Fetch votes made by the current user ---
             let voted_permalinks: HashSet<String> = if let Some(ref user_id) = user_id_opt {
                 let vote_filter = doc! {
                     "author_id": user_id,
@@ -87,7 +84,27 @@ pub async fn get_all_posts(
                 HashSet::new()
             };
 
-            // Collect enriched post data
+            // --- Fetch follows by current user ---
+            let followed_authors: HashSet<_> = if let Some(ref current_user_id) = user_id_opt {
+                let follow_filter = doc! {
+                    "follower_id": current_user_id,
+                    "following_id": { "$in": &author_ids }
+                };
+
+                match follow_collection.find(follow_filter).await {
+                    Ok(cursor) => {
+                        cursor
+                            .filter_map(|res| async { res.ok().map(|f| f.following_id) })
+                            .collect()
+                            .await
+                    }
+                    Err(_) => HashSet::new(),
+                }
+            } else {
+                HashSet::new()
+            };
+
+            // --- Build results ---
             let mut results = Vec::new();
 
             for post in posts {
@@ -121,12 +138,19 @@ pub async fn get_all_posts(
                     None
                 };
 
+                let followed_by_user = post
+                    .author_id
+                    .as_ref()
+                    .map(|id| followed_authors.contains(id))
+                    .unwrap_or(false);
+
                 let mut post_json =
                     serde_json::to_value(PostWithAuthor { post, author }.to_response()).unwrap();
 
                 post_json["total_votes"] = json!(total_votes);
                 post_json["total_comments"] = json!(total_comments);
                 post_json["voted_by_user"] = json!(voted_permalinks.contains(&permalink));
+                post_json["followed_by_user"] = json!(followed_by_user);
 
                 results.push(post_json);
             }
@@ -360,7 +384,7 @@ pub async fn get_post_by_permalink(
                     { "deleted_at": Bson::Null }
                 ]
             };
-            
+
             let voted_permalinks: HashSet<String> = if let Some(ref user_id) = user_id_opt {
                 let vote_filter = doc! {
                     "author_id": user_id,
@@ -383,7 +407,6 @@ pub async fn get_post_by_permalink(
             } else {
                 HashSet::new()
             };
-
 
             let total_votes = vote_collection
                 .count_documents(vote_filter)
@@ -445,10 +468,7 @@ pub async fn update_post(
 ) -> impl Responder {
     let collection = state.post_db.clone();
 
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(err) => return err,
-    };
+    let user_id = identify(req).await;
 
     let id = match ObjectId::parse_str(&*post_id) {
         Ok(parsed_id) => parsed_id.to_string(),
@@ -456,7 +476,7 @@ pub async fn update_post(
     };
 
     let mut updated_post = updated_post.into_inner();
-    updated_post.author_id = Some(user_id.clone());
+    updated_post.author_id = user_id.clone();
     updated_post.updated_at = Some(DateTime::now().try_to_rfc3339_string().unwrap());
 
     let update_doc = match to_document(&updated_post) {
@@ -509,10 +529,7 @@ pub async fn delete_post(
         }
     };
 
-    let user_id = match identify(req).await {
-        Ok(id) => id,
-        Err(error_response) => return error_response,
-    };
+    let user_id = identify(req).await;
 
     let collection = state.post_db.clone();
 

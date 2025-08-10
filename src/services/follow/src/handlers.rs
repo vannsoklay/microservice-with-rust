@@ -195,8 +195,15 @@ pub async fn followers(
         .unwrap_or_else(|| "created_at".to_string());
     let sort_order = query.sort_order.unwrap_or(-1);
 
+    let cursor = follow_db
+        .find(doc! { "following_id": &user_id })
+        .sort(doc! { &sort_field: sort_order })
+        .skip(skip)
+        .limit(limit as i64)
+        .await;
+
     // Step 1: Find all follows where following_id = user_id
-    let mut follows_cursor = match follow_db.find(doc! { "following_id": &user_id }).await {
+    let mut follows_cursor = match cursor {
         Ok(cursor) => cursor,
         Err(_) => {
             return HttpResponse::BadGateway().json(json!({
@@ -233,10 +240,10 @@ pub async fn followers(
 
     HttpResponse::Ok().json(serde_json::json!({
         "message": "Followers retrieved successfully",
+        "count": users.len(),
         "pagination": {
             "page": page,
             "limit": limit,
-            "count": users.len()
         },
         "data": users
     }))
@@ -248,6 +255,8 @@ pub async fn following(
     query: web::Query<Query>,
 ) -> impl Responder {
     let follow_db = state.follow_db.clone();
+    let user_db = state.user_db.clone();
+
     let user_id: String = user_id.into_inner();
 
     // Pagination defaults
@@ -263,33 +272,58 @@ pub async fn following(
 
     let sort_order = query.sort_order.unwrap_or(-1); // default to newest first
 
-    let data = follow_db
+    let cursor = follow_db
         .find(doc! { "follower_id": user_id })
-        .limit(limit as i64)
-        .skip(skip)
         .sort(doc! { &sort_field: sort_order })
+        .skip(skip)
+        .limit(limit as i64)
         .await;
 
-    match data {
-        Ok(cursor) => {
-            let data: Vec<_> = cursor.filter_map(|doc| async { doc.ok() }).collect().await;
-
-            HttpResponse::Ok().json(serde_json::json!({
-                "message": "Following retrieved successfully",
-                "pagination": {
-                    "page": page,
-                    "limit": limit,
-                    "count": data.len()
-                },
-                "data": data
-            }))
-        }
+    // Step 1: Find all follows where following_id = user_id
+    let mut follows_cursor = match cursor {
+        Ok(cursor) => cursor,
         Err(_) => {
             return HttpResponse::BadGateway().json(json!({
-                "messsage": "Internat server error"
+                "message": "Internal server error"
             }));
         }
+    };
+
+    // Step 2: Collect all following_id values
+    let mut following_ids = Vec::new();
+    while let Some(result) = follows_cursor.next().await {
+        if let Ok(follow) = result {
+            if let Ok(following_oid) = ObjectId::parse_str(&follow.following_id) {
+                following_ids.push(following_oid.to_hex());
+            }
+        }
     }
+
+    // Step 3: Query user collection for all following_ids
+    let filter = doc! { "_id": { "$in": &following_ids } };
+    let users_cursor = match user_db.find(filter).await {
+        Ok(cursor) => cursor,
+        Err(_) => {
+            return HttpResponse::BadGateway().json(json!({
+                "message": "Internal server error"
+            }));
+        }
+    };
+
+    let users: Vec<User> = users_cursor
+        .filter_map(|doc| async { doc.ok() })
+        .collect()
+        .await;
+
+    HttpResponse::Ok().json(serde_json::json!({
+        "message": "Following retrieved successfully",
+        "count": users.len(),
+        "pagination": {
+            "page": page,
+            "limit": limit
+        },
+        "data": users
+    }))
 }
 
 pub async fn follow_count(
