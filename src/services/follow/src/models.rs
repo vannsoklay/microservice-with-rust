@@ -7,7 +7,7 @@ pub struct User {
     #[serde(serialize_with = "serialize_object_id_as_hex_string")]
     #[serde(rename(serialize = "id"))]
     #[serde(rename(deserialize = "_id"))]
-    id: ObjectId,
+    pub id: ObjectId,
 
     username: Option<String>,
     email: Option<String>,

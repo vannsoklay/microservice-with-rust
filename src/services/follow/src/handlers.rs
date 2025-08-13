@@ -174,14 +174,18 @@ pub async fn follow_status(
 
 pub async fn followers(
     state: web::Data<AppState>,
-    user_id: web::Path<String>,
+    handle: web::Path<String>,
     query: web::Query<Query>,
 ) -> impl Responder {
-    use mongodb::bson::{doc, oid::ObjectId};
-
     let follow_db = state.follow_db.clone();
     let user_db = state.user_db.clone();
-    let user_id = user_id.into_inner();
+    let handle = handle.into_inner();
+
+    let user_id = user_db
+        .find_one(doc! { "username": handle })
+        .await
+        .unwrap()
+        .map(|user| user.id.to_hex());
 
     // Pagination defaults
     let page = query.page.unwrap_or(1).max(1);
@@ -251,13 +255,19 @@ pub async fn followers(
 
 pub async fn following(
     state: web::Data<AppState>,
-    user_id: web::Path<String>,
+    handle: web::Path<String>,
     query: web::Query<Query>,
 ) -> impl Responder {
     let follow_db = state.follow_db.clone();
     let user_db = state.user_db.clone();
 
-    let user_id: String = user_id.into_inner();
+    let handle = handle.into_inner();
+
+    let user_id = user_db
+        .find_one(doc! { "username": handle })
+        .await
+        .unwrap()
+        .map(|user| user.id.to_hex());
 
     // Pagination defaults
     let page = query.page.unwrap_or(1).max(1);
