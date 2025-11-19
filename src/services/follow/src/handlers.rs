@@ -242,9 +242,14 @@ pub async fn followers(
         .collect()
         .await;
 
+    let total_follower = follow_db
+        .count_documents(doc! { "following_id": &user_id  })
+        .await
+        .unwrap_or(0);
+
     HttpResponse::Ok().json(serde_json::json!({
         "message": "Followers retrieved successfully",
-        "count": users.len(),
+        "count": total_follower,
         "pagination": {
             "page": page,
             "limit": limit,
@@ -283,7 +288,7 @@ pub async fn following(
     let sort_order = query.sort_order.unwrap_or(-1); // default to newest first
 
     let cursor = follow_db
-        .find(doc! { "follower_id": user_id })
+        .find(doc! { "follower_id": &user_id })
         .sort(doc! { &sort_field: sort_order })
         .skip(skip)
         .limit(limit as i64)
@@ -325,9 +330,14 @@ pub async fn following(
         .collect()
         .await;
 
+    let total_following = follow_db
+        .count_documents(doc! { "follower_id": &user_id })
+        .await
+        .unwrap_or(0);
+
     HttpResponse::Ok().json(serde_json::json!({
         "message": "Following retrieved successfully",
-        "count": users.len(),
+        "count": total_following,
         "pagination": {
             "page": page,
             "limit": limit

@@ -1,10 +1,3 @@
-use std::env;
-
-pub fn global_variables(key: String) -> String {
-    let variable = env::var(key.clone())
-        .expect(&format!("{} must be set in the environment", key.clone()).to_string());
-    variable
-}
 
 pub fn public_service(path: &str) -> bool {
     if path == "/api/v1/auth/login" || path == "/api/v1/auth/register" {
@@ -23,7 +16,7 @@ pub fn detect_service(path: &str) -> Option<&'static str> {
         ("/posts", "post"),
         ("/comments", "comment"),
         ("/votes", "vote"),
-        ("/accommodations", "accommodation"),
+        ("/properties", "property"),
         ("/orders", "order"),
     ];
 

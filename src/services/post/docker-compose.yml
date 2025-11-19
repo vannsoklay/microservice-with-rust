@@ -5,9 +5,9 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: gateway-service
+    container_name: post-service
     ports:
-      - "8000:8000"
+      - "8082:8082"
     env_file:
       - .env
     restart: always

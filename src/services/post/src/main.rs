@@ -6,7 +6,7 @@ use crate::{
     models::Comment,
 };
 use actix_web::{web, App, HttpServer};
-use clap::Parser;
+use std::env;
 use db::DBConfig;
 use models::{AuthorInfo, Follow, Post, Vote};
 
@@ -17,12 +17,6 @@ mod middleware;
 mod models;
 mod response;
 mod utils;
-
-#[derive(Parser)]
-struct Cli {
-    #[clap(short, long, default_value = "8088")]
-    port: String,
-}
 
 pub struct AppState {
     pub post_db: mongodb::Collection<Post>,
@@ -37,7 +31,7 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let args: Cli = Cli::parse();
+    let port = env::var("PORT").unwrap_or_else(|_| "8082".into());
 
     let post_db = DBConfig::post_collection().await;
     let user_db = DBConfig::user_collection().await;
@@ -45,8 +39,7 @@ async fn main() -> std::io::Result<()> {
     let comment_db = DBConfig::comment_collection().await;
     let follow_db = DBConfig::follow_collection().await;
 
-    let port = args.port;
-    let bind_address = format!("127.0.0.1:{}", port);
+    let bind_address = format!("0.0.0.0:{}", port);
 
     println!("Starting server on port {}", port);
 

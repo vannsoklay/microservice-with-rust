@@ -1,6 +1,6 @@
 use crate::handlers::{create_or_remove_vote, get_votes_by_post};
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use clap::Parser;
+use std::env;
 use db::DBConfig;
 use models::{Post, Vote};
 use mongodb::Collection;
@@ -9,11 +9,6 @@ mod db;
 mod handlers;
 mod middleware;
 mod models;
-#[derive(Parser)]
-struct Cli {
-    #[clap(short, long, default_value = "8091")]
-    port: String,
-}
 
 pub struct AppState {
     pub vote_db: Collection<Vote>,
@@ -25,12 +20,11 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let args = Cli::parse();
+    let port = env::var("PORT").unwrap_or_else(|_| "8084".into());
 
     let vote_db = DBConfig::vote_collection().await;
     let post_db = DBConfig::post_collection().await;
 
-    let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);

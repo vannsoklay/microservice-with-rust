@@ -26,11 +26,11 @@ async fn db() -> Database {
     let client = Client::with_options(client_options).unwrap();
 
     // Ping the database to confirm connection
-    let database = client.database("admin");
-    database
-        .run_command(mongodb::bson::doc! { "ping": 1 })
-        .await
-        .unwrap();
+    // let database = client.database("admin");
+    // database
+    //     .run_command(mongodb::bson::doc! { "ping": 1 })
+    //     .await
+    //     .unwrap();
 
     let database = client.database(&db_name);
     database

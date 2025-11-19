@@ -5,7 +5,7 @@ use crate::{
     models::{Follow, User},
 };
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use clap::Parser;
+use std::env;
 use db::DBConfig;
 use mongodb::Collection;
 
@@ -13,11 +13,6 @@ mod db;
 mod handlers;
 mod middleware;
 mod models;
-#[derive(Parser)]
-struct Cli {
-    #[clap(short, long, default_value = "9011")]
-    port: String,
-}
 
 pub struct AppState {
     pub follow_db: Collection<Follow>,
@@ -29,12 +24,11 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let args = Cli::parse();
+    let port = env::var("PORT").unwrap_or_else(|_| "8085".into());
 
     let follow_db = DBConfig::follow_collection().await;
     let user_db = DBConfig::user_collection().await;
 
-    let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);

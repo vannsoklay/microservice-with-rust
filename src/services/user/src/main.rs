@@ -1,18 +1,13 @@
 use crate::handlers::{change_password, get_user};
 use actix_web::{middleware::Logger, web, App, HttpServer};
-use clap::Parser;
-use mongodb::{Client, Database};
+use std::env;
+use mongodb::Database;
 
 mod db;
 mod handlers;
 mod middleware;
 mod models;
 mod response;
-#[derive(Parser)]
-struct Cli {
-    #[clap(short, long, default_value = "8083")]
-    port: String,
-}
 
 pub struct AppState {
     pub db: Database,
@@ -23,11 +18,10 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-    let args = Cli::parse();
-    
+    let port = env::var("PORT").unwrap_or_else(|_| "8080".into());
+
     let db = db::db().await;
 
-    let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);

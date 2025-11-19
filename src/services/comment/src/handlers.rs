@@ -6,7 +6,7 @@ use actix_web::{web, HttpMessage as _, HttpRequest, HttpResponse, Responder};
 use futures::TryStreamExt as _;
 use mongodb::bson::{self, doc, Bson, DateTime};
 
-pub async fn create_comment(  
+pub async fn create_comment(
     state: web::Data<AppState>,
     body: web::Json<CommentReq>,
     req: HttpRequest,
@@ -93,6 +93,7 @@ pub async fn get_comments_by_post(
         .skip(skip)
         .limit(limit as i64)
         .await;
+
     match cursor_result {
         Ok(mut cursor) => {
             let mut comments = Vec::new();

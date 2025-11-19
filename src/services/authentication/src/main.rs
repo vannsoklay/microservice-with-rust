@@ -1,20 +1,14 @@
 use actix_web::{web, App, HttpServer};
-use clap::Parser;
+use std::env;
 use crate::handlers::{register, login};
 use mongodb::{Database, Client};
-   
+
 mod models;
 mod handlers;
 mod response;
 mod identify;
 mod db;
 mod jwt;
-
-#[derive(Parser)]
-struct Cli {
-    #[clap(short, long, default_value = "8089")]
-    port: String,
-}
 
 pub struct AppState {
     pub db: Database,
@@ -25,16 +19,9 @@ async fn main() -> std::io::Result<()> {
     dotenv::dotenv().ok();
     env_logger::init();
 
-
-    let args = Cli::parse();
-
-    // Initialize MongoDB client
-    // let client = Client::with_uri_str("mongodb://localhost:27017").await.unwrap();
-    // let db = client.database("microservice-db");
-
+    let port = env::var("PORT").unwrap_or_else(|_| "8081".into());
     let db = db::db().await;
 
-    let port = args.port;
     let bind_address = format!("127.0.0.1:{}", port);
 
     println!("Starting server on port {}", port);

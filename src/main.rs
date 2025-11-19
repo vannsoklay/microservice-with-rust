@@ -43,7 +43,7 @@ async fn main() -> std::io::Result<()> {
             .default_service(web::route().to(|| HttpResponse::NotFound()))
             .wrap(cors)
     })
-    .bind("0.0.0.0:8443")?
+    .bind("0.0.0.0:8000")?
     .run()
     .await
 }

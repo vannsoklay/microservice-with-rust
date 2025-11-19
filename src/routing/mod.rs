@@ -13,7 +13,7 @@ pub struct ServiceState {
     pub comment_counter: AtomicUsize,
     pub vote_counter: AtomicUsize,
     pub post_counter: AtomicUsize,
-    pub accommodation_counter: AtomicUsize,
+    pub property_counter: AtomicUsize,
     pub order_counter: AtomicUsize,
 }
 
@@ -27,7 +27,7 @@ impl ServiceState {
             comment_counter: AtomicUsize::new(0),
             vote_counter: AtomicUsize::new(0),
             post_counter: AtomicUsize::new(0),
-            accommodation_counter: AtomicUsize::new(0),
+            property_counter: AtomicUsize::new(0),
             order_counter: AtomicUsize::new(0),
         }
     }
@@ -65,10 +65,10 @@ impl ServiceState {
                     % load_balancer::VOTE_BACKENDS.len();
                 Some(load_balancer::VOTE_BACKENDS[index])
             }
-            "accommodation" => {
-                let index = self.accommodation_counter.fetch_add(1, Ordering::SeqCst)
-                    % load_balancer::ACCOMMODATION_BACKENDS.len();
-                Some(load_balancer::ACCOMMODATION_BACKENDS[index])
+            "property" => {
+                let index = self.property_counter.fetch_add(1, Ordering::SeqCst)
+                    % load_balancer::PROPERTY_BACKENDS.len();
+                Some(load_balancer::PROPERTY_BACKENDS[index])
             }
             "order" => {
                 let index = self.order_counter.fetch_add(1, Ordering::SeqCst)
