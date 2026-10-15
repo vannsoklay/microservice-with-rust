@@ -1,7 +1,7 @@
 use crate::jwt::generate_jwt;
 use crate::models::*;
 use crate::AppState;
-use actix_web::{web, HttpRequest, HttpResponse, Responder};
+use actix_web::{web, HttpResponse, Responder};
 use argon2::{
     password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, PasswordVerifier, SaltString},
     Argon2,
@@ -58,25 +58,9 @@ pub async fn register(
 
 pub async fn login(
     state: web::Data<AppState>,
-    req: HttpRequest,
     body: web::Json<LoginRequest>,
 ) -> impl Responder {
     let collection = state.db.collection::<User>("users");
-    let jwt_secret = match req.headers().get("x-jwt-secret") {
-        Some(header_value) => match header_value.to_str() {
-            Ok(secret_str) => secret_str.to_string(),
-            Err(_) => {
-                return HttpResponse::BadRequest().json(json!({
-                    "message": "Invalid JWT secret header format."
-                }));
-            }
-        },
-        None => {
-            return HttpResponse::BadRequest().json(json!({
-                "message": "Missing JWT secret in headers."
-            }));
-        }
-    };
 
     let user = match collection
         .find_one(doc! { "username": &body.username })
@@ -102,7 +86,7 @@ pub async fn login(
         .is_ok();
 
     if is_valid {
-        match generate_jwt(&user.id.to_hex(), Some("user"), &jwt_secret) {
+        match generate_jwt(&user.id.to_hex(), Some("user"), &state.jwt_secret) {
             Ok(token) => HttpResponse::Created().json(json!({
                 "message": "Login successful.",
                 "access_token": token,

@@ -20,9 +20,6 @@ RUN apt-get update && apt-get install -y \
 # Copy binary from build stage
 COPY --from=builder /app/target/release/gateway /app/gateway
 
-# Copy .env if needed
-COPY .env /app/.env
-
 EXPOSE 8000
 
 CMD ["./gateway"]

@@ -51,12 +51,11 @@ pub async fn forward_request(
     headers.insert("Content-Type", "application/json".parse().unwrap());
 
     if let Some(claims) = claims {
-        headers.insert("X-Service-Key", "key_accommodation".parse().unwrap());
+        headers.insert("X-Service-Key", state.service_key.parse().unwrap());
         headers.insert("X-User-ID", claims.sub.parse().unwrap());
         headers.insert("X-User-Role", claims.role.parse().unwrap());
     }
 
-    headers.insert("x-jwt-secret", "123456789".parse().unwrap());
     builder = builder.headers(headers);
 
     let response = builder.body(body).send().await;

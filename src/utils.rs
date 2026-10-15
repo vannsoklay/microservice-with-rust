@@ -16,8 +16,6 @@ pub fn detect_service(path: &str) -> Option<&'static str> {
         ("/posts", "post"),
         ("/comments", "comment"),
         ("/votes", "vote"),
-        ("/properties", "property"),
-        ("/orders", "order"),
     ];
 
     for (prefix, name) in services.iter() {

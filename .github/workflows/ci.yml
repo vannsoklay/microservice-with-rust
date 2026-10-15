@@ -1,0 +1,59 @@
+name: CI
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  build-and-test:
+    name: build-and-test / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gateway
+            path: .
+          - name: authentication
+            path: src/services/authentication
+          - name: comment
+            path: src/services/comment
+          - name: follow
+            path: src/services/follow
+          - name: post
+            path: src/services/post
+          - name: storage
+            path: src/services/storage
+          - name: user
+            path: src/services/user
+          - name: vote
+            path: src/services/vote
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ matrix.path }}
+
+      - name: Check formatting
+        working-directory: ${{ matrix.path }}
+        run: cargo fmt --check
+        continue-on-error: true
+
+      - name: Clippy
+        working-directory: ${{ matrix.path }}
+        run: cargo clippy --all-targets -- -D warnings
+        continue-on-error: true
+
+      - name: Build
+        working-directory: ${{ matrix.path }}
+        run: cargo build --verbose
+
+      - name: Test
+        working-directory: ${{ matrix.path }}
+        run: cargo test --verbose

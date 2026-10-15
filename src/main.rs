@@ -17,7 +17,8 @@ use routing::{gateway::forward_request, ServiceState};
 async fn main() -> std::io::Result<()> {
     dotenv().ok();
     tracing_subscriber::fmt::init();
-    let state = Arc::new(ServiceState::new());
+    let service_key = std::env::var("INTERNAL_SECRET_KEY").expect("INTERNAL_SECRET_KEY missing");
+    let state = Arc::new(ServiceState::new(service_key));
 
     HttpServer::new(move || {
         let cors = Cors::permissive()

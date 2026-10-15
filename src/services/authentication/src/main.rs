@@ -12,6 +12,7 @@ mod jwt;
 
 pub struct AppState {
     pub db: Database,
+    pub jwt_secret: String,
 }
 
 #[actix_web::main]
@@ -20,6 +21,7 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let port = env::var("PORT").unwrap_or_else(|_| "8081".into());
+    let jwt_secret = env::var("JWT_SECRET").expect("JWT_SECRET missing");
     let db = db::db().await;
 
     let bind_address = format!("127.0.0.1:{}", port);
@@ -27,7 +29,7 @@ async fn main() -> std::io::Result<()> {
     println!("Starting server on port {}", port);
 
      // Create AppState
-     let app_state = web::Data::new(AppState { db });
+     let app_state = web::Data::new(AppState { db, jwt_secret });
 
     HttpServer::new(move || {
         App::new()

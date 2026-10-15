@@ -25,7 +25,7 @@ async fn db() -> Database {
         .unwrap();
 
     let client = Client::with_options(client_options).unwrap();
-    let database = client.database("microservice-db");
+    let database = client.database(&db_name);
     database
 }
 

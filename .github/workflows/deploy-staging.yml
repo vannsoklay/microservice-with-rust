@@ -1,0 +1,132 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: build-release / ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: gateway
+            path: .
+          - name: authentication
+            path: src/services/authentication
+          - name: comment
+            path: src/services/comment
+          - name: follow
+            path: src/services/follow
+          - name: post
+            path: src/services/post
+          - name: storage
+            path: src/services/storage
+          - name: user
+            path: src/services/user
+          - name: vote
+            path: src/services/vote
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: ${{ matrix.path }}
+
+      - name: Build release binary
+        working-directory: ${{ matrix.path }}
+        run: cargo build --release --verbose
+
+      - name: Upload binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bin-${{ matrix.name }}
+          path: ${{ matrix.path }}/target/release/${{ matrix.name }}
+          if-no-files-found: error
+          retention-days: 7
+
+  deploy:
+    name: Deploy to staging host
+    needs: build
+    runs-on: ubuntu-latest
+    environment: staging
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            server.sh
+          sparse-checkout-cone-mode: false
+
+      - name: Download all release binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      # Lay the downloaded binaries out in the same relative paths server.sh
+      # expects on the staging host: target/release/gateway for the gateway,
+      # and src/services/<name>/target/release/<name> for every service.
+      - name: Assemble deploy tree
+        run: |
+          set -euo pipefail
+          mkdir -p deploy/target/release
+          mv artifacts/bin-gateway/gateway deploy/target/release/gateway
+          for svc in authentication comment follow post storage user vote; do
+            mkdir -p "deploy/src/services/$svc/target/release"
+            mv "artifacts/bin-$svc/$svc" "deploy/src/services/$svc/target/release/$svc"
+          done
+          cp server.sh deploy/server.sh
+          chmod +x deploy/server.sh deploy/target/release/gateway deploy/src/services/*/target/release/*
+
+      - name: Set up SSH
+        env:
+          SSH_KEY: ${{ secrets.STAGING_SSH_KEY }}
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_PORT: ${{ secrets.STAGING_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          mkdir -p ~/.ssh
+          echo "$SSH_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -p "${SSH_PORT:-22}" -H "$SSH_HOST" >> ~/.ssh/known_hosts
+
+      # Never uses --delete: this only ever adds/updates binaries and
+      # server.sh. It must not touch .env files or anything else already
+      # provisioned on the host.
+      - name: Rsync binaries + server.sh to staging
+        env:
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_PORT: ${{ secrets.STAGING_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$SSH_USER@$SSH_HOST" "mkdir -p '$DEPLOY_PATH'"
+          rsync -avz -e "ssh -i ~/.ssh/deploy_key -p ${SSH_PORT:-22} -o UserKnownHostsFile=~/.ssh/known_hosts" \
+            deploy/ "$SSH_USER@$SSH_HOST:$DEPLOY_PATH/"
+
+      - name: Restart services on staging
+        env:
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_PORT: ${{ secrets.STAGING_SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.STAGING_DEPLOY_PATH }}
+        run: |
+          set -euo pipefail
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$SSH_USER@$SSH_HOST" "cd '$DEPLOY_PATH' && ./server.sh restart"
+
+      - name: Smoke test /health
+        env:
+          SSH_USER: ${{ secrets.STAGING_USER }}
+          SSH_HOST: ${{ secrets.STAGING_HOST }}
+          SSH_PORT: ${{ secrets.STAGING_SSH_PORT }}
+        run: |
+          set -euo pipefail
+          sleep 3
+          ssh -i ~/.ssh/deploy_key -p "${SSH_PORT:-22}" -o UserKnownHostsFile=~/.ssh/known_hosts \
+            "$SSH_USER@$SSH_HOST" "curl -sf http://localhost:8000/health"

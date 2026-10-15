@@ -7,28 +7,26 @@ pub mod load_balancer;
 // Atomic counter for round-robin load balancing per service
 pub struct ServiceState {
     pub http_client: Client,
+    pub service_key: String,
     pub auth_counter: AtomicUsize,
     pub user_counter: AtomicUsize,
     pub follow_counter: AtomicUsize,
     pub comment_counter: AtomicUsize,
     pub vote_counter: AtomicUsize,
     pub post_counter: AtomicUsize,
-    pub property_counter: AtomicUsize,
-    pub order_counter: AtomicUsize,
 }
 
 impl ServiceState {
-    pub fn new() -> Self {
+    pub fn new(service_key: String) -> Self {
         ServiceState {
             http_client: Client::new(),
+            service_key,
             auth_counter: AtomicUsize::new(0),
             user_counter: AtomicUsize::new(0),
             follow_counter: AtomicUsize::new(0),
             comment_counter: AtomicUsize::new(0),
             vote_counter: AtomicUsize::new(0),
             post_counter: AtomicUsize::new(0),
-            property_counter: AtomicUsize::new(0),
-            order_counter: AtomicUsize::new(0),
         }
     }
 
@@ -64,16 +62,6 @@ impl ServiceState {
                 let index = self.vote_counter.fetch_add(1, Ordering::SeqCst)
                     % load_balancer::VOTE_BACKENDS.len();
                 Some(load_balancer::VOTE_BACKENDS[index])
-            }
-            "property" => {
-                let index = self.property_counter.fetch_add(1, Ordering::SeqCst)
-                    % load_balancer::PROPERTY_BACKENDS.len();
-                Some(load_balancer::PROPERTY_BACKENDS[index])
-            }
-            "order" => {
-                let index = self.order_counter.fetch_add(1, Ordering::SeqCst)
-                    % load_balancer::ORDER_BACKENDS.len();
-                Some(load_balancer::ORDER_BACKENDS[index])
             }
             _ => None,
         }
